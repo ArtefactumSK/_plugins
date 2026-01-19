@@ -1,0 +1,44 @@
+# WordPress core
+/wp-admin/
+/wp-includes/
+/arte-content/uploads/
+/arte-content/cache/
+
+# Obrázky (okrem SVG nechaj)
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+*.ico
+*.bmp
+
+# Fonty
+*.ttf
+*.woff
+*.woff2
+*.eot
+
+# Backup
+*.bak
+*~
+*.swp
+*.tmp
+
+# Systém
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Archívy
+*.zip
+*.rar
+*.7z
+
+# Logs
+*.log
+error_log
+
+# Config (citlivé údaje)
+wp-config.php
+.env
