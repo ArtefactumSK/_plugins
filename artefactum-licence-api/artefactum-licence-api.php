@@ -1186,16 +1186,16 @@ function artefactum_licence_statistics_shortcode($atts) {
 
         <!-- Štatistické karty -->
         <div class="arte-stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px;">
-            <div class="arte-stat-card active" style="background: #f8f9fa; padding: 15px; border-radius: 6px; text-align: center; border-left: 4px solid #ddd;">
+            <div class="arte-stat-card active" style="background: #f8f9fa; padding: 15px; border-radius: 6px; text-align: center; border-left: 4px solid #3b82f6;">
                 <div class="arte-stat-label" style="font-size: 12px; color: #666; text-transform: uppercase;">Celkom</div>
-                <div class="arte-stat-number" style="font-size: 28px; font-weight: bold; margin: 5px 0; color:#374151;"><?php echo $total; ?></div>
+                <div class="arte-stat-number" style="font-size: 28px; font-weight: bold; margin: 5px 0; color:#3b82f6;"><?php echo $total; ?></div>
                 <div class="arte-progress-bar" style="background: #e5e7eb; height: 8px; border-radius: 4px; overflow: hidden; margin: 10px 0;">
-                    <div class="arte-progress-fill" style="width:100%; background:#10b981; height:100%;"></div>
+                    <div class="arte-progress-fill" style="width:100%; background:#3b82f6; height:100%;"></div>
                 </div>
             </div>
             <div class="arte-stat-card active" style="background: #f8f9fa; padding: 15px; border-radius: 6px; text-align: center; border-left: 4px solid #10b981;">
                 <div class="arte-stat-label" style="font-size: 12px; color: #666; text-transform: uppercase;">Aktívne</div>
-                <div class="arte-stat-number" style="font-size: 28px; font-weight: bold; margin: 5px 0; color:#10b981;"><?php echo $active; ?></div>
+                <div class="arte-stat-number" style="font-size: 28px; font-weight: bold; color:#10b981;line-height: .9; margin: 5px 0 -5px 0;"><?php echo $active; ?></div>
                 <small style="color:#666;"><?php echo $active_percent; ?>%</small>
                 <div class="arte-progress-bar" style="background: #e5e7eb; height: 8px; border-radius: 4px; overflow: hidden; margin: 10px 0;">
                     <div class="arte-progress-fill" style="width:<?php echo $active_percent; ?>%; background:#10b981; height:100%;"></div>
@@ -1211,7 +1211,7 @@ function artefactum_licence_statistics_shortcode($atts) {
                 <div class="arte-stat-number" style="font-size: 28px; font-weight: bold; margin: 5px 0; color:#ef4444;"><?php echo $expired; ?></div>
                 <small style="color:#666;"><?php echo $expired_percent; ?>%</small>
             </div>
-            <div class="arte-stat-card info" style="background: #f8f9fa; padding: 15px; border-radius: 6px; text-align: center; border-left: 4px solid #3b82f6;">
+            <div class="arte-stat-card info" style="background: #f8f9fa; padding: 15px; border-radius: 6px; text-align: center; border-left: 4px solid #5a5555;">
                 <div class="arte-stat-label" style="font-size: 12px; color: #666; text-transform: uppercase;">Pozastavené</div>
                 <div class="arte-stat-number" style="font-size: 28px; font-weight: bold; margin: 5px 0; color:#6b7280;"><?php echo $suspended; ?></div>
             </div>
@@ -1688,7 +1688,7 @@ function artefactum_extended_statistics_shortcode($atts) {
                 </div>
                 <?php 
                 if ($unpaid_total<1){echo '<small style="color:#666;">';}
-                else {echo '<small style="color:#dc2626">';}           
+                else {echo '<small style="color:#dc2626">- ';}           
                 echo number_format($unpaid_total, 2); ?> €</small>
             </div>
             
@@ -1700,7 +1700,7 @@ function artefactum_extended_statistics_shortcode($atts) {
                 </div>
                 <?php 
                 if ($unpaidadvanced_total<1){echo '<small style="color:#666;">';}
-                else {echo '<small style="color:#dc2626">';}
+                else {echo '<small style="color:#dc2626">- ';}
                 echo number_format($unpaidadvanced_total, 2); ?> €</small>
             </div>
             
@@ -1796,7 +1796,7 @@ function artefactum_extended_statistics_shortcode($atts) {
         </table>
         
         <div style="margin-top:15px;padding:12px 5px;background:rgba(196 181 174 / 15%);border-left:4px solid red;border-radius:4px;">
-            <span style="color:red;">Celková suma dlhu: <strong style="display:inline-block"><?php echo number_format($unpaid_total, 2); ?> €</strong></span>
+            <span style="color:red;">Celková suma dlhu: <strong style="display:inline-block">- <?php echo number_format($unpaid_total, 2); ?> €</strong></span>
         </div>
     </div>
     <?php endif; ?>
@@ -1853,7 +1853,7 @@ function artefactum_extended_statistics_shortcode($atts) {
         </table>
         
         <div style="margin-top:15px;padding:12px 5px;background:#fee2e2;border-left:4px solid #dc2626;border-radius:4px;">
-			<span style="color:#991b1b;">Neuhradené celkom: <strong style="display:inline-block"><?php echo number_format($unpaidadvanced_total, 2); ?> €</strong></span>
+			<span style="color:#991b1b;">Neuhradené celkom: <strong style="display:inline-block">- <?php echo number_format($unpaidadvanced_total, 2); ?> €</strong></span>
         </div>
     </div>	
     <?php endif; 
