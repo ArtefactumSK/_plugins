@@ -1181,7 +1181,7 @@ function artefactum_licence_statistics_shortcode($atts) {
     ?>
     <div class="artefactum-licence-statistics" style="max-width:1200px; margin:40px auto; padding:20px; background:#fff; border:1px solid #e5e7eb; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
         <h2 style="text-align:center; color:#f60; margin-bottom:30px;">
-            📊 Artefactum Licences
+            📋 Artefactum Licenses
         </h2>
 
         <!-- Štatistické karty -->
@@ -1438,7 +1438,7 @@ function artefactum_licence_statistics_shortcode($atts) {
 
         <p class="statbuttons">
             <a href="<?php echo admin_url('admin.php?page=artefactum-licences'); ?>" class="button button-Tprimary">
-                📊 Zobraziť všetky licencie
+                🧩 Zobraziť všetky licencie
             </a>
             <a href="<?php echo admin_url('admin.php?page=artefactum-logs'); ?>" class="button button-Tsecondary">
                 📋 Zobraziť logy
@@ -1583,20 +1583,22 @@ function artefactum_extended_statistics_shortcode($atts) {
     // === 3 NEUHRADENÉ FAKTÚRY (DATA DB) ===
     $unpaid_invoices = $db_dat->get_results("
         SELECT 
-            customeruid,
-            cislo_faktury,
-            popis,
-            hradacelkom,
-            dtumsplatnosti,
-            DATEDIFF(NOW(), dtumsplatnosti) as days_overdue
-        FROM invoicesartefactum
-        WHERE dtumhrady = ''
-        ORDER BY dtumsplatnosti ASC
-        LIMIT 20
+			customeruid,
+			companyname,
+            slofaktry,
+			popis,
+			hradacelkom,
+			dtumsplatnosti,
+			DATEDIFF(NOW(), dtumsplatnosti) as days_overdue
+		FROM invoicesartefactum
+		WHERE (dtumhrady IS NULL OR dtumhrady = '')
+		ORDER BY dtumsplatnosti ASC
+		LIMIT 20;
     ");
-    
+
+
     $unpaid_total = $db_dat->get_var("
-        SELECT SUM(hradacelkom) FROM invoicesartefactum WHERE dtumhrady = ''
+        SELECT SUM(hradacelkom) FROM invoicesartefactum WHERE dtumhrady IS NULL OR dtumhrady = ''
     ");
 
     // === 4️ NEUHRADENÉ ZÁLOHOVÉ FAKTÚRY (DATA DB) ===
@@ -1733,7 +1735,7 @@ function artefactum_extended_statistics_shortcode($atts) {
 			// Formatovanie výstupu ako v tvojom fungujúcom príklade
 			echo '<div style="padding:15px 20px;background:#fff;border-left:4px solid #10b981;margin:20px 0;border-radius:5px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">';
 			echo '<span style="font-size:16px;color:#666;"> <strong style="color:#10b981;">' . $current_year . '</strong> - faktúrované celkom: </span>';
-			echo '<strong style="font-size:18px;color:#10b981;margin-left:10px;">' . number_format($total_invoiced, 2, ',', ' ') . ' €</strong>';
+			echo '<strong style="font-size:18px;color:#10b981;margin-left:10px;display:inline-block">' . number_format($total_invoiced, 2, ',', ' ') . ' €</strong>';
 			echo '</div>';
 		} else {
 			echo '<div style="background:#fee2e2;padding:15px;border-radius:5px;color:#991b1b;">⚠️ Chyba pripojenia k databáze</div>';
@@ -1746,44 +1748,44 @@ function artefactum_extended_statistics_shortcode($atts) {
     <!-- 🚨 NEUHRADENÉ FAKTÚRY -->
     <?php if (!empty($unpaid_invoices)): ?>
     <div style="background:#fff;padding:20px;border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,0.1);margin-bottom:20px;">
-        <h3 style="margin:0 0 15px 0;color:#dc2626;border-bottom:2px solid #dc2626;padding-bottom:8px;">
+        <h3 style="margin:0 0 15px 0;color:red;border-bottom:2px solid #dc2626;padding-bottom:8px;">
             🚨 Neuhradené faktúry (TOP 20)
         </h3>
         <table class="arte-responsive-table" style="width:100%;font-size:12px;border-collapse:collapse;">
             <thead>
-                <tr style="background-color: #c4b5ae;border-bottom:2px solid #e5e7eb;">
-                    <th style="padding:8px;text-align:left;">Klient</th>
-                    <th style="padding:8px;text-align:left;">Faktúra #</th>
-                    <th style="padding:8px;text-align:left;">Fakturované</th>
-                    <th style="padding:8px;">Dátum splatnosti</th>
-                    <th style="padding:8px;text-align:right;">Suma</th>
-                    <th style="padding:8px;text-align:right;">Dni po splatnosti</th>
+                <tr style="background-color: #c4b5ae;">
+                    <th style="background-color: #c4b5ae;padding:8px;text-align:left;">Klient</th>
+                    <th style="background-color: #c4b5ae;padding:8px;text-align:center;">Faktúra #</th>
+                    <th style="background-color: #c4b5ae;padding:8px;text-align:left;">Fakturované</th>
+                    <th style="background-color: #c4b5ae;padding:8px;text-align:right;">Dátum splatnosti</th>
+                    <th style="background-color: #c4b5ae;padding:8px;text-align:right;">Suma</th>
+                    <th style="background-color: #c4b5ae;padding:8px;text-align:right;">Dni po splatnosti</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($unpaid_invoices as $invoice): ?>
                     <?php
-                    $overdue_color = $invoice->days_overdue > 30 ? '#dc2626' : ($invoice->days_overdue > 14 ? '#f60' : '#6b7280');
+                    $overdue_color = $invoice->days_overdue > 30 ? '#dc2626' : ($invoice->days_overdue > 14 ? '#f60' : 'red');
                     ?>
                     <tr class="collapsed">
                         <td data-label="Klient" style="padding:8px;">
-                            <code style="background:#f3f4f6;padding:2px 6px;border-radius:3px;font-size:10px;">
-                                <?php echo esc_html($invoice->customeruid); ?>
+                            <code style="background:#f3f4f6;padding:2px 6px;border-radius:3px;font-size:12px;">
+                                <?php echo esc_html($invoice->companyname); ?>
                             </code>
                         </td>
-                        <td data-label="Faktúra #" style="padding:8px;">
-                            <strong><?php echo esc_html($invoice->cislo_faktury); ?></strong>
+                        <td data-label="Faktúra #" style="padding:8px;text-align:center;">
+                            <strong><?php echo esc_html($invoice->slofaktry); ?></strong>
                         </td>
-                        <td data-label="Fakturované" style="padding:8px;">
+                        <td data-label="Fakturované" style="padding:8px;text-align:left;">
                             <?php echo esc_html($invoice->popis); ?>
                         </td>
-                        <td data-label="Splatnosť" style="padding:8px;">
+                        <td data-label="Splatnosť" style="padding:8px;text-align:right;">
                             <?php echo date('d.m.Y', strtotime($invoice->dtumsplatnosti)); ?>
                         </td>
-                        <td data-label="Suma" style="padding:8px;">
+                        <td data-label="Suma" style="padding:8px;text-align:right;">
                             <strong><?php echo number_format($invoice->hradacelkom, 2); ?> €</strong>
                         </td>
-                        <td data-label="Po splatnosti" style="padding:8px;">
+                        <td data-label="Po splatnosti" style="padding:8px;text-align:right;">
                             <span style="color:<?php echo $overdue_color; ?>;font-weight:bold;">
                                 <?php echo $invoice->days_overdue; ?> dní
                             </span>
@@ -1793,8 +1795,8 @@ function artefactum_extended_statistics_shortcode($atts) {
             </tbody>
         </table>
         
-        <div style="margin-top:15px;padding:12px 5px;background:#fee2e2;border-left:4px solid #dc2626;border-radius:4px;">
-            <span style="color:#991b1b;">Celková suma dlhu: <strong><?php echo number_format($unpaid_total, 2); ?> €</strong></span>
+        <div style="margin-top:15px;padding:12px 5px;background:rgba(196 181 174 / 15%);border-left:4px solid red;border-radius:4px;">
+            <span style="color:red;">Celková suma dlhu: <strong style="display:inline-block"><?php echo number_format($unpaid_total, 2); ?> €</strong></span>
         </div>
     </div>
     <?php endif; ?>
@@ -1802,8 +1804,8 @@ function artefactum_extended_statistics_shortcode($atts) {
     <!-- 🚨 NEUHRADENÉ PREDFAKTÚRY -->
     <?php if (!empty($unpaid_advanced)): ?>
     <div style="background:#fff;padding:20px;border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,0.1);margin-bottom:20px;">
-        <h3 style="margin:0 0 15px 0;color:#dc2626;border-bottom:2px solid #dc2626;padding-bottom:8px;">
-            🚨 Neuhradené predfaktúry (TOP 20)
+        <h4 style="margin:0 0 15px 0;color:#dc2626;border-bottom:2px solid #dc2626;padding-bottom:8px;">
+            ‼ Neuhradené predfaktúry (TOP 20)
         </h3>
         <table class="arte-responsive-table" style="width:100%;font-size:12px;border-collapse:collapse;">
             <thead>
@@ -1851,7 +1853,7 @@ function artefactum_extended_statistics_shortcode($atts) {
         </table>
         
         <div style="margin-top:15px;padding:12px 5px;background:#fee2e2;border-left:4px solid #dc2626;border-radius:4px;">
-			<span style="color:#991b1b;">Celková suma dlhu: <strong><?php echo number_format($unpaidadvanced_total, 2); ?> €</strong></span>
+			<span style="color:#991b1b;">Neuhradené celkom: <strong style="display:inline-block"><?php echo number_format($unpaidadvanced_total, 2); ?> €</strong></span>
         </div>
     </div>	
     <?php endif; 
@@ -1885,7 +1887,7 @@ function artefactum_extended_statistics_shortcode($atts) {
 	<!-- PREHĽAD SLUŽIEB PODĽA TYPU -->
 		<div style="background:#fff;padding:20px;border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,0.1);margin-bottom:20px;">
 			<h3 style="margin:0 0 15px 0;color:#f60;border-bottom:2px solid #f60;padding-bottom:8px;">
-				📊 Prehľad ročných služieb podľa typu 
+				🔌Prehľad ročných služieb podľa typu 
 			</h3><span style="font-size:16px;color:#666;">
 			<? echo do_shortcode('[wpdatatable_sum table_id=27 col_id=331 var2="'.date("Y").'" label="Predplatené ročné služby - celkom:"]');
 			?></span>
@@ -2177,3 +2179,33 @@ register_activation_hook(__FILE__, function() {
     dbDelta($sql2);
     dbDelta($sql3);
 });
+
+// AJAX handler pre dismiss widgetu (CLIENT SIDE)
+add_action('wp_ajax_arte_dismiss_widget', 'arte_dismiss_widget_handler');
+function arte_dismiss_widget_handler() {
+    check_ajax_referer('arte_widget_dismiss', 'nonce');
+    
+    $user_id = get_current_user_id();
+    if (!$user_id) wp_send_json_error();
+    
+    $domain = $_SERVER['HTTP_HOST'] ?? 'unknown';
+    $meta_key = 'arte_dismissed_widget_' . md5($domain);
+    
+    update_user_meta($user_id, $meta_key, time());
+    wp_send_json_success();
+}
+
+// AJAX handler pre "zobraziť znovu" (CLIENT SIDE)
+add_action('wp_ajax_arte_undismiss_widget', 'arte_undismiss_widget_handler');
+function arte_undismiss_widget_handler() {
+    check_ajax_referer('arte_widget_dismiss', 'nonce');
+    
+    $user_id = get_current_user_id();
+    if (!$user_id) wp_send_json_error();
+    
+    $domain = $_SERVER['HTTP_HOST'] ?? 'unknown';
+    $meta_key = 'arte_dismissed_widget_' . md5($domain);
+    
+    delete_user_meta($user_id, $meta_key);
+    wp_send_json_success();
+}
