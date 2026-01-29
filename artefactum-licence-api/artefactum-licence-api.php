@@ -1887,7 +1887,7 @@ function artefactum_extended_statistics_shortcode($atts) {
         </h4>
         
         <div style="overflow-x:auto;">
-            <table style="width:100%;font-size:12px;border-collapse:collapse;min-width:900px;">
+            <table style="width:100%;font-size:12px;border-collapse:collapse;min-width:900px;margin-bottom:10px !important; ">
                 <thead>
                     <tr style="background:#c4b5ae;">
                         <th style="background:#c4b5ae;padding:8px;text-align:left;border:1px solid #ddd;">Typ</th>
@@ -1963,20 +1963,11 @@ function artefactum_extended_statistics_shortcode($atts) {
                         $grand_average_sum = $grand_total_sum / 12;
                         ?>
                     </tr>
-
-                    <!-- HORIZONTÁLNA ČIARA -->
-                    <tr style="background:#e5e7eb;">
-                        <td colspan="13" style="padding:1px;"></td>
-                    </tr>
-
-                    <!-- ROČNÝ CELKOVÝ SÚČET -->
-                    <tr style="font-size:16px;color:#666">
-                        <td colspan="13" style="padding:12px;border:1px solid #ddd;text-align:center;">
-                            Predpokladaný ročný príjem celkom: <strong style="color:#10b981;font-size:18px;margin-left:10px;"><?php echo number_format($grand_total_sum, 2); ?> €</strong> <span style="padding-left:20px;color:#666;font-size:14px;">⍉ <?php echo number_format($grand_average_sum, 2); ?> € /mes.</span>
-                        </td>
-                    </tr>
                 </tbody>
             </table>
+            <!-- ROČNÝ CELKOVÝ SÚČET -->
+            <div style="padding:12px 5px;background:rgb(196 181 174 / 20%);border-left:4px solid #ff6600;border-radius:4px;text-align:center;margin:0;">  Predpokladaný ročný príjem celkom: <strong style="color:#10b981;font-size:18px;margin-left:10px;"><?php echo number_format($grand_total_sum, 2); ?> €</strong> <span style="padding-left:20px;color:#666;font-size:14px;">⍉ <?php echo number_format($grand_average_sum, 2); ?> € /mes.</span>
+             </div>
         </div>
     </div>
         <!-- ZOZNAM TABULIEK -->
@@ -1988,7 +1979,7 @@ function artefactum_extended_statistics_shortcode($atts) {
         <h3 style="margin:0 0 15px 0;color:red;border-bottom:2px solid #dc2626;padding-bottom:8px;">
             🚨 Neuhradené faktúry (TOP 20)
         </h3>
-        <table class="arte-responsive-table" style="width:100%;font-size:12px;border-collapse:collapse;">
+        <table class="arte-responsive-table" style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:10px !important;">
             <thead>
                 <tr style="background-color: #c4b5ae;">
                     <th style="background-color: #c4b5ae;padding:8px;text-align:left;">Klient</th>
@@ -2044,7 +2035,7 @@ function artefactum_extended_statistics_shortcode($atts) {
         <h4 style="margin:0 0 15px 0;color:#dc2626;border-bottom:2px solid #dc2626;padding-bottom:8px;">
             ‼ Neuhradené predfaktúry (TOP 20)
         </h3>
-        <table class="arte-responsive-table" style="width:100%;font-size:12px;border-collapse:collapse;">
+        <table class="arte-responsive-table" style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:10px !important;">
             <thead>
                 <tr style="border-bottom:2px solid #e5e7eb;">
                     <th style="background-color: #c4b5ae;padding:8px;text-align:left;">Klient</th>
@@ -2176,7 +2167,7 @@ function artefactum_extended_statistics_shortcode($atts) {
         <h3 style="margin:0 0 15px 0;color:#f60;border-bottom:2px solid #f60;padding-bottom:8px;">
             ⏰ Expirujúce ročné služby (do 60 dní)
         </h3>
-        <table class="arte-responsive-table" style="width:100%;font-size:12px;border-collapse:collapse;">
+        <table class="arte-responsive-table" style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:10px !important;">
             <thead>
                 <tr style="border-bottom:2px solid #e5e7eb;">
                     <th style="background-color: #c4b5ae;padding:8px;text-align:left;">Doména</th>
