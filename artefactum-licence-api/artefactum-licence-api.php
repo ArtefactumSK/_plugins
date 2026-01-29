@@ -1765,7 +1765,7 @@ function artefactum_extended_statistics_shortcode($atts) {
             <tbody>
                 <?php foreach ($unpaid_invoices as $invoice): ?>
                     <?php
-                    $overdue_color = $invoice->days_overdue > 30 ? '#dc2626' : ($invoice->days_overdue > 14 ? '#f60' : 'red');
+                    $overdue_color = $invoice->days_overdue < 0 ? '#6b7280' : ($invoice->days_overdue > 14 ? '#f60' : 'red');
                     ?>
                     <tr class="collapsed">
                         <td data-label="Klient" style="padding:8px;">
