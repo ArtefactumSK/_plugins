@@ -809,12 +809,12 @@ function artefactum_admin_page() {
                     <th style="width:10%;">Licenčný kľúč</th>
                     <th style="width:10%;">Klient</th>
                     <th style="width:10%;">Email(y)</th>
-                    <th style="width:7%;text-align:center;">Expirácia</th>
-                    <th style="width:5%;text-align:center;">Status</th>
+                    <th style="width:7%;">Expirácia</th>
+                    <th style="width:7%;">Status</th>
                     <th style="width:9%;">Last Seen</th>
-                    <th style="width:10%;">Poznámka</th>
-                    <th style="width:10%;">Správa</th>
-                    <th style="width:15%;text-align:center;">Akcie</th>
+                    <th style="width:15%;">Poznámka</th>
+                    <th style="width:15%;">Správa</th>
+                    <th style="width:5%;">Akcie</th>
                 </tr>
             </thead>
             <tbody>
@@ -825,10 +825,10 @@ function artefactum_admin_page() {
                         <?php
                         $status_colors = [
                             'active' => '#10b981',
-                            'suspended' => '#FF6600',
+                            'suspended' => '#6b7280',
                             'expired' => '#ef4444'
                         ];
-                        $color = $status_colors[$lic->status] ?? '#FF6600';
+                        $color = $status_colors[$lic->status] ?? '#6b7280';
                         
                         $expiry_display = $lic->expiry_date 
                             ? date('d.m.Y', strtotime($lic->expiry_date))
@@ -878,9 +878,9 @@ function artefactum_admin_page() {
                             <td title="<?php echo esc_attr($lic->contact_email); ?>">
                                 <small><?php echo esc_html($emails_display ?: '-'); ?></small>
                             </td>
-                            <td style="text-align:center;"><?php echo $expiry_display; ?></td>
-                            <td style="text-align:center;">
-                                <span style="color:<?php echo $color; ?>;font-weight:bold;font-size:10px;">
+                            <td><?php echo $expiry_display; ?></td>
+                            <td>
+                                <span style="color:<?php echo $color; ?>;font-weight:bold;font-size:11px;">
                                     <?php echo strtoupper($lic->status); ?>
                                 </span>
                             </td>
@@ -898,7 +898,7 @@ function artefactum_admin_page() {
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <div style="display:flex;gap:2px;align-items:center;justify-content:center;">
+                                <div style="display:flex;gap:4px;flex-wrap:wrap;">
                                     <a href="<?php echo admin_url('admin.php?page=artefactum-licences&edit=' . $lic->id); ?>" 
                                        class="button button-small" 
                                        title="Upraviť">
@@ -1068,7 +1068,7 @@ function artefactum_logs_page() {
                             'check_grace' => '#ef4444',
                             'check_expired' => '#dc2626',
                             'check_invalid_token' => '#9ca3af',
-                            'check_not_found' => '#FF6600',
+                            'check_not_found' => '#6b7280',
                             'check_invalid_subdomain' => '#dc2626'
                         ];
                         $action_color = $action_colors[$log->action] ?? '#333';
@@ -1213,7 +1213,7 @@ function artefactum_licence_statistics_shortcode($atts) {
             </div>
             <div class="arte-stat-card info" style="background: #f8f9fa; padding: 15px; border-radius: 6px; text-align: center; border-left: 4px solid #5a5555;">
                 <div class="arte-stat-label" style="font-size: 12px; color: #666; text-transform: uppercase;">Pozastavené</div>
-                <div class="arte-stat-number" style="font-size: 28px; font-weight: bold; margin: 5px 0; color:#FF6600;"><?php echo $suspended; ?></div>
+                <div class="arte-stat-number" style="font-size: 28px; font-weight: bold; margin: 5px 0; color:#6b7280;"><?php echo $suspended; ?></div>
             </div>
             <div class="arte-stat-card active" style="background: #f8f9fa; padding: 15px; border-radius: 6px; text-align: center; border-left: 4px solid #10b981;">
                 <div class="arte-stat-label" style="font-size: 12px; color: #666; text-transform: uppercase;">Neobmedzené</div>
@@ -1734,7 +1734,7 @@ function artefactum_extended_statistics_shortcode($atts) {
 			
 			// Formatovanie výstupu ako v tvojom fungujúcom príklade
 			echo '<div style="padding:15px 20px;background:#fff;border-left:4px solid #10b981;margin:20px 0;border-radius:5px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">';
-			echo '<span style="font-size:16px;color:#666;"> <strong style="color:#10b981;">' . $current_year . '</strong> - uhradené faktúry celkom: </span>';
+			echo '<span style="font-size:16px;color:#666;"> <strong style="color:#10b981;">' . $current_year . '</strong> - faktúrované celkom: </span>';
 			echo '<strong style="font-size:18px;color:#10b981;margin-left:10px;display:inline-block">' . number_format($total_invoiced, 2, ',', ' ') . ' €</strong>';
 			echo '</div>';
 		} else {
