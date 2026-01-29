@@ -1820,6 +1820,43 @@ function artefactum_extended_statistics_shortcode($atts) {
             }
         }
 
+	// === POČTY ZÁZNAMOV ZA ROK (PRE KAŽDÝ TYP) ===
+		$yearly_counts = [
+		    'sk' => 0,
+		    'eu' => 0,
+		    'com' => 0,
+		    'ssl' => 0,
+		    'hosting' => 0
+		];
+
+		if (!empty($all_yearly_services)) {
+		    foreach ($all_yearly_services as $service) {
+			$name = strtolower($service->nazovsluyby);
+			
+			// Evidencie domén
+			if (strpos($name, 'evidencia') !== false) {
+			    if (preg_match('/\.sk\b/i', $name)) {
+				$yearly_counts['sk']++;
+			    } elseif (preg_match('/\.eu\b/i', $name)) {
+				$yearly_counts['eu']++;
+			    } elseif (preg_match('/\.com\b/i', $name)) {
+				$yearly_counts['com']++;
+			    }
+			}
+			
+			// SSL certifikáty
+			if (strpos($name, 'basic ssl') !== false) {
+			    $yearly_counts['ssl']++;
+			}
+			
+			// Hostingy
+			if (strpos($name, 'hosting') !== false) {
+			    $yearly_counts['hosting']++;
+			}
+		    }
+		}
+
+
 
         // === MESAČNÝ ROZPAD PRÍJMOV Z ROČNÝCH SLUŽBI ===      
 		if ($db_dat) {
@@ -1846,11 +1883,11 @@ function artefactum_extended_statistics_shortcode($atts) {
         <!-- MESAČNÝ ROZPAD PRÍJMOV -->
     <div style="background:#fff;padding:20px;border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,0.1);margin:20px 0;">
         <h4 style="margin:0 0 15px 0;color:#f60;border-bottom:2px solid #f60;padding-bottom:8px;">
-            📅 Predpokladané mesačný príjmy z ročných služieb
+            📅 Predpokladané príjmy z ročných služieb
         </h4>
         
         <div style="overflow-x:auto;">
-            <table style="width:100%;font-size:11px;border-collapse:collapse;min-width:900px;">
+            <table style="width:100%;font-size:12px;border-collapse:collapse;min-width:900px;">
                 <thead>
                     <tr style="background:#c4b5ae;">
                         <th style="background:#c4b5ae;padding:8px;text-align:left;border:1px solid #ddd;">Typ</th>
@@ -1865,24 +1902,26 @@ function artefactum_extended_statistics_shortcode($atts) {
                 <tbody>
                     <?php
                     $types = [
-                        'sk' => ['label' => 'SK domény', 'color' => '#10b981'],
-                        'eu' => ['label' => 'EU domény', 'color' => '#3b82f6'],
-                        'com' => ['label' => 'COM domény', 'color' => '#8b5cf6'],
-                        'ssl' => ['label' => 'SSL certifikáty', 'color' => '#f59e0b'],
-                        'hosting' => ['label' => 'Hostingy', 'color' => '#ef4444']
-                    ];
-                    
-                    foreach ($types as $key => $type) {
-                        echo "<tr>";
-                        echo "<td style='padding:8px;border:1px solid #ddd;font-weight:bold;color:{$type['color']};'>{$type['label']}</td>";
+			    'sk' => ['label' => 'SK domény', 'color' => '#10b981'],
+			    'eu' => ['label' => 'EU domény', 'color' => '#3b82f6'],
+			    'com' => ['label' => 'COM domény', 'color' => '#8b5cf6'],
+			    'ssl' => ['label' => 'SSL certifikáty', 'color' => '#f59e0b'],
+			    'hosting' => ['label' => 'Hostingy', 'color' => '#ef4444']
+			];
+
+			foreach ($types as $key => $type) {
+			    echo "<tr>";
+			    echo "<td style='padding:8px;border:1px solid #ddd;font-weight:bold;color:{$type['color']};'>";
+			    echo "{$type['label']} <span style='color:#666;font-weight:normal;'>({$yearly_counts[$key]})</span>";
+			    echo "</td>";
                         
                         for ($m = 1; $m <= 12; $m++) {
                             $count = $monthly_breakdown[$m][$key]['count'];
                             $sum = $monthly_breakdown[$m][$key]['sum'];
                             
                             if ($count > 0) {
-                                echo "<td style='padding:8px;border:1px solid #ddd;text-align:right;background:#f9fafb;'>";
-                                echo "<span style='color:{$type['color']};font-weight:bold;'>({$count}) " . number_format($sum, 2) . " €</span>";
+                                echo "<td style='color:#666;padding:8px 4px;border:1px solid #ddd;text-align:right;background:#f9fafb;'>";
+                                echo "({$count}) <span style='color:{$type['color']};'>" . number_format($sum, 2) . " €</span>";
                                 echo "</td>";
                             } else {
                                 echo "<td style='padding:8px;border:1px solid #ddd;text-align:center;color:#ccc;'>-</td>";
@@ -1896,11 +1935,12 @@ function artefactum_extended_statistics_shortcode($atts) {
                     <tr style="background:#e5e7eb;">
                         <td colspan="13" style="padding:1px;"></td>
                     </tr>
-                    
                     <!-- CELKOM ZA MESIAC -->
-                    <tr style="background:transparent;font-weight:bold;">
+                    <tr style="background:transparent;">
                         <td style="padding:10px;border:1px solid #ddd;color:#374151;">CELKOM</td>
                         <?php
+                        $grand_total_sum = 0; // Globálny súčet
+                        
                         for ($m = 1; $m <= 12; $m++) {
                             $total_count = 0;
                             $total_sum = 0;
@@ -1910,15 +1950,30 @@ function artefactum_extended_statistics_shortcode($atts) {
                                 $total_sum += $monthly_breakdown[$m][$key]['sum'];
                             }
                             
+                            $grand_total_sum += $total_sum; // Pripočítaj k celkovému súčtu
+                            
                             if ($total_count > 0) {
-                                echo "<td style='padding:10px;border:1px solid #ddd;text-align:right;color:#10b981;'>";
-                                echo "({$total_count}) " . number_format($total_sum, 2) . " €";
+                                echo "<td style='color:#666;padding:10px 1px;border:1px solid #ddd;text-align:right;'>";
+                                echo "({$total_count}) " ."<strong style='color:#10b981;'>". number_format($total_sum, 2) . "</strong> €";
                                 echo "</td>";
                             } else {
                                 echo "<td style='padding:10px;border:1px solid #ddd;text-align:center;color:#999;'>-</td>";
                             }
                         }
+                        $grand_average_sum = $grand_total_sum / 12;
                         ?>
+                    </tr>
+
+                    <!-- HORIZONTÁLNA ČIARA -->
+                    <tr style="background:#e5e7eb;">
+                        <td colspan="13" style="padding:1px;"></td>
+                    </tr>
+
+                    <!-- ROČNÝ CELKOVÝ SÚČET -->
+                    <tr style="font-size:16px;color:#666">
+                        <td colspan="13" style="padding:12px;border:1px solid #ddd;text-align:center;">
+                            Predpokladaný ročný príjem celkom: <strong style="color:#10b981;font-size:18px;margin-left:10px;"><?php echo number_format($grand_total_sum, 2); ?> €</strong> <span style="padding-left:20px;color:#666;font-size:14px;">⍉ <?php echo number_format($grand_average_sum, 2); ?> € /mes.</span>
+                        </td>
                     </tr>
                 </tbody>
             </table>
