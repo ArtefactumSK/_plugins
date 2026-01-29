@@ -1584,7 +1584,7 @@ function arte_get_extended_data_db() {
  */
 add_shortcode('artefactum_extended_statistics', 'artefactum_extended_statistics_shortcode');
 
-function artefactum_extended_statistics_shortcode($atts) {
+function artefactum_extended_statistics_shortcode($atts) { 
     global $wpdb;
     $db_dat = arte_get_extended_data_db();
     
@@ -1776,6 +1776,52 @@ function artefactum_extended_statistics_shortcode($atts) {
         AND nazovsluyby NOT LIKE '%NEPREDLŽOVAŤ%'
         ");
 
+
+        // === VÝPOČET MESAČNÉHO ROZPADU ===
+        $monthly_breakdown = array_fill(1, 12, [
+            'sk' => ['count' => 0, 'sum' => 0],
+            'eu' => ['count' => 0, 'sum' => 0],
+            'com' => ['count' => 0, 'sum' => 0],
+            'ssl' => ['count' => 0, 'sum' => 0],
+            'hosting' => ['count' => 0, 'sum' => 0]
+        ]);
+
+        if (!empty($all_yearly_services)) {
+            foreach ($all_yearly_services as $service) {
+                $month = (int)$service->expiry_month;
+                $price = (float)$service->cenasluzbyrok;
+                $name = strtolower($service->nazovsluyby);
+                
+                // Evidencie domén
+                if (strpos($name, 'evidencia') !== false) {
+                    if (preg_match('/\.sk\b/i', $name)) {
+                        $monthly_breakdown[$month]['sk']['count']++;
+                        $monthly_breakdown[$month]['sk']['sum'] += ($price - 16.50);
+                    } elseif (preg_match('/\.eu\b/i', $name)) {
+                        $monthly_breakdown[$month]['eu']['count']++;
+                        $monthly_breakdown[$month]['eu']['sum'] += ($price - 12);
+                    } elseif (preg_match('/\.com\b/i', $name)) {
+                        $monthly_breakdown[$month]['com']['count']++;
+                        $monthly_breakdown[$month]['com']['sum'] += ($price - 18);
+                    }
+                }
+                
+                // SSL certifikáty
+                if (strpos($name, 'basic ssl') !== false) {
+                    $monthly_breakdown[$month]['ssl']['count']++;
+                    $monthly_breakdown[$month]['ssl']['sum'] += $price;
+                }
+                
+                // Hostingy
+                if (strpos($name, 'hosting') !== false) {
+                    $monthly_breakdown[$month]['hosting']['count']++;
+                    $monthly_breakdown[$month]['hosting']['sum'] += $price;
+                }
+            }
+        }
+
+
+        // === MESAČNÝ ROZPAD PRÍJMOV Z ROČNÝCH SLUŽBI ===      
 		if ($db_dat) {
 			// ✅ Priamy SQL dotaz - SPOĽAHLIVÝ
 			$total_invoiced = $db_dat->get_var($db_dat->prepare("
@@ -1799,19 +1845,19 @@ function artefactum_extended_statistics_shortcode($atts) {
         </div>
         <!-- MESAČNÝ ROZPAD PRÍJMOV -->
     <div style="background:#fff;padding:20px;border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,0.1);margin:20px 0;">
-        <h3 style="margin:0 0 15px 0;color:#f60;border-bottom:2px solid #f60;padding-bottom:8px;">
-            📅 Mesačný rozpad príjmov z ročných služieb
-        </h3>
+        <h4 style="margin:0 0 15px 0;color:#f60;border-bottom:2px solid #f60;padding-bottom:8px;">
+            📅 Predpokladané mesačný príjmy z ročných služieb
+        </h4>
         
         <div style="overflow-x:auto;">
             <table style="width:100%;font-size:11px;border-collapse:collapse;min-width:900px;">
                 <thead>
                     <tr style="background:#c4b5ae;">
-                        <th style="padding:8px;text-align:left;border:1px solid #ddd;">Typ</th>
+                        <th style="background:#c4b5ae;padding:8px;text-align:left;border:1px solid #ddd;">Typ</th>
                         <?php
                         $months = ['Jan', 'Feb', 'Mar', 'Apr', 'Máj', 'Jún', 'Júl', 'Aug', 'Sep', 'Okt', 'Nov', 'Dec'];
                         foreach ($months as $m) {
-                            echo "<th style='padding:8px;text-align:right;border:1px solid #ddd;'>$m</th>";
+                            echo "<th style='background:#c4b5ae;padding:8px;text-align:center;border:1px solid #ddd;'>$m</th>";
                         }
                         ?>
                     </tr>
@@ -1852,7 +1898,7 @@ function artefactum_extended_statistics_shortcode($atts) {
                     </tr>
                     
                     <!-- CELKOM ZA MESIAC -->
-                    <tr style="background:#f3f4f6;font-weight:bold;">
+                    <tr style="background:transparent;font-weight:bold;">
                         <td style="padding:10px;border:1px solid #ddd;color:#374151;">CELKOM</td>
                         <?php
                         for ($m = 1; $m <= 12; $m++) {
@@ -1865,7 +1911,7 @@ function artefactum_extended_statistics_shortcode($atts) {
                             }
                             
                             if ($total_count > 0) {
-                                echo "<td style='padding:10px;border:1px solid #ddd;text-align:right;background:#10b981;color:#fff;'>";
+                                echo "<td style='padding:10px;border:1px solid #ddd;text-align:right;color:#10b981;'>";
                                 echo "({$total_count}) " . number_format($total_sum, 2) . " €";
                                 echo "</td>";
                             } else {
