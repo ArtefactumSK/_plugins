@@ -1177,6 +1177,49 @@ function artefactum_licence_statistics_shortcode($atts) {
     $active_percent = $total > 0 ? round(($active / $total) * 100) : 0;
     $expired_percent = $total > 0 ? round(($expired / $total) * 100) : 0;
 
+    // === VÝPOČET MESAČNÉHO ROZPADU ===
+$monthly_breakdown = array_fill(1, 12, [
+    'sk' => ['count' => 0, 'sum' => 0],
+    'eu' => ['count' => 0, 'sum' => 0],
+    'com' => ['count' => 0, 'sum' => 0],
+    'ssl' => ['count' => 0, 'sum' => 0],
+    'hosting' => ['count' => 0, 'sum' => 0]
+]);
+
+if (!empty($all_yearly_services)) {
+    foreach ($all_yearly_services as $service) {
+        $month = (int)$service->expiry_month;
+        $price = (float)$service->cenasluzbyrok;
+        $name = strtolower($service->nazovsluyby);
+        
+        // Evidencie domén
+        if (strpos($name, 'evidencia') !== false) {
+            if (preg_match('/\.sk\b/i', $name)) {
+                $monthly_breakdown[$month]['sk']['count']++;
+                $monthly_breakdown[$month]['sk']['sum'] += ($price - 16.50);
+            } elseif (preg_match('/\.eu\b/i', $name)) {
+                $monthly_breakdown[$month]['eu']['count']++;
+                $monthly_breakdown[$month]['eu']['sum'] += ($price - 12);
+            } elseif (preg_match('/\.com\b/i', $name)) {
+                $monthly_breakdown[$month]['com']['count']++;
+                $monthly_breakdown[$month]['com']['sum'] += ($price - 18);
+            }
+        }
+        
+        // SSL certifikáty
+        if (strpos($name, 'basic ssl') !== false) {
+            $monthly_breakdown[$month]['ssl']['count']++;
+            $monthly_breakdown[$month]['ssl']['sum'] += $price;
+        }
+        
+        // Hostingy
+        if (strpos($name, 'hosting') !== false) {
+            $monthly_breakdown[$month]['hosting']['count']++;
+            $monthly_breakdown[$month]['hosting']['sum'] += $price;
+        }
+    }
+}
+
     ob_start();
     ?>
     <div class="artefactum-licence-statistics" style="max-width:1200px; margin:40px auto; padding:20px; background:#fff; border:1px solid #e5e7eb; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
@@ -1720,6 +1763,18 @@ function artefactum_extended_statistics_shortcode($atts) {
 			// fakturovane tohto roku
 		$current_year = date('Y');
 		$db_dat = arte_get_extended_data_db();
+        
+        // === VŠETKY ROČNÉ SLUŽBY PRE MESAČNÝ ROZPAD ===
+        $all_yearly_services = $db_dat->get_results("
+        SELECT 
+            nazovsluyby,
+            cenasluzbyrok,
+            datumexpiracie,
+            MONTH(datumexpiracie) as expiry_month
+        FROM predplatenerocnesluzby
+        WHERE YEAR(datumexpiracie) = YEAR(NOW())
+        AND nazovsluyby NOT LIKE '%NEPREDLŽOVAŤ%'
+        ");
 
 		if ($db_dat) {
 			// ✅ Priamy SQL dotaz - SPOĽAHLIVÝ
@@ -1742,6 +1797,87 @@ function artefactum_extended_statistics_shortcode($atts) {
 		}
 		?>
         </div>
+        <!-- MESAČNÝ ROZPAD PRÍJMOV -->
+    <div style="background:#fff;padding:20px;border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,0.1);margin:20px 0;">
+        <h3 style="margin:0 0 15px 0;color:#f60;border-bottom:2px solid #f60;padding-bottom:8px;">
+            📅 Mesačný rozpad príjmov z ročných služieb
+        </h3>
+        
+        <div style="overflow-x:auto;">
+            <table style="width:100%;font-size:11px;border-collapse:collapse;min-width:900px;">
+                <thead>
+                    <tr style="background:#c4b5ae;">
+                        <th style="padding:8px;text-align:left;border:1px solid #ddd;">Typ</th>
+                        <?php
+                        $months = ['Jan', 'Feb', 'Mar', 'Apr', 'Máj', 'Jún', 'Júl', 'Aug', 'Sep', 'Okt', 'Nov', 'Dec'];
+                        foreach ($months as $m) {
+                            echo "<th style='padding:8px;text-align:right;border:1px solid #ddd;'>$m</th>";
+                        }
+                        ?>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php
+                    $types = [
+                        'sk' => ['label' => 'SK domény', 'color' => '#10b981'],
+                        'eu' => ['label' => 'EU domény', 'color' => '#3b82f6'],
+                        'com' => ['label' => 'COM domény', 'color' => '#8b5cf6'],
+                        'ssl' => ['label' => 'SSL certifikáty', 'color' => '#f59e0b'],
+                        'hosting' => ['label' => 'Hostingy', 'color' => '#ef4444']
+                    ];
+                    
+                    foreach ($types as $key => $type) {
+                        echo "<tr>";
+                        echo "<td style='padding:8px;border:1px solid #ddd;font-weight:bold;color:{$type['color']};'>{$type['label']}</td>";
+                        
+                        for ($m = 1; $m <= 12; $m++) {
+                            $count = $monthly_breakdown[$m][$key]['count'];
+                            $sum = $monthly_breakdown[$m][$key]['sum'];
+                            
+                            if ($count > 0) {
+                                echo "<td style='padding:8px;border:1px solid #ddd;text-align:right;background:#f9fafb;'>";
+                                echo "<span style='color:{$type['color']};font-weight:bold;'>({$count}) " . number_format($sum, 2) . " €</span>";
+                                echo "</td>";
+                            } else {
+                                echo "<td style='padding:8px;border:1px solid #ddd;text-align:center;color:#ccc;'>-</td>";
+                            }
+                        }
+                        echo "</tr>";
+                    }
+                    ?>
+                    
+                    <!-- HORIZONTÁLNA ČIARA -->
+                    <tr style="background:#e5e7eb;">
+                        <td colspan="13" style="padding:1px;"></td>
+                    </tr>
+                    
+                    <!-- CELKOM ZA MESIAC -->
+                    <tr style="background:#f3f4f6;font-weight:bold;">
+                        <td style="padding:10px;border:1px solid #ddd;color:#374151;">CELKOM</td>
+                        <?php
+                        for ($m = 1; $m <= 12; $m++) {
+                            $total_count = 0;
+                            $total_sum = 0;
+                            
+                            foreach (['sk', 'eu', 'com', 'ssl', 'hosting'] as $key) {
+                                $total_count += $monthly_breakdown[$m][$key]['count'];
+                                $total_sum += $monthly_breakdown[$m][$key]['sum'];
+                            }
+                            
+                            if ($total_count > 0) {
+                                echo "<td style='padding:10px;border:1px solid #ddd;text-align:right;background:#10b981;color:#fff;'>";
+                                echo "({$total_count}) " . number_format($total_sum, 2) . " €";
+                                echo "</td>";
+                            } else {
+                                echo "<td style='padding:10px;border:1px solid #ddd;text-align:center;color:#999;'>-</td>";
+                            }
+                        }
+                        ?>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
         <!-- ZOZNAM TABULIEK -->
         <div style="max-width:100%;margin-top:30px;">
     
@@ -2095,6 +2231,50 @@ function artefactum_api_extended_stats($request) {
     global $wpdb;
     $db_dat = arte_get_extended_data_db();
     
+
+    // === VŠETKY ROČNÉ SLUŽBY PRE MESAČNÝ ROZPAD ===// === VÝPOČET MESAČNÉHO ROZPADU ===
+    $monthly_breakdown = array_fill(1, 12, [
+        'sk' => ['count' => 0, 'sum' => 0],
+        'eu' => ['count' => 0, 'sum' => 0],
+        'com' => ['count' => 0, 'sum' => 0],
+        'ssl' => ['count' => 0, 'sum' => 0],
+        'hosting' => ['count' => 0, 'sum' => 0]
+    ]);
+
+    if (!empty($all_yearly_services)) {
+        foreach ($all_yearly_services as $service) {
+            $month = (int)$service->expiry_month;
+            $price = (float)$service->cenasluzbyrok;
+            $name = strtolower($service->nazovsluyby);
+            
+            // Evidencie domén
+            if (strpos($name, 'evidencia') !== false) {
+                if (preg_match('/\.sk\b/i', $name)) {
+                    $monthly_breakdown[$month]['sk']['count']++;
+                    $monthly_breakdown[$month]['sk']['sum'] += ($price - 16.50);
+                } elseif (preg_match('/\.eu\b/i', $name)) {
+                    $monthly_breakdown[$month]['eu']['count']++;
+                    $monthly_breakdown[$month]['eu']['sum'] += ($price - 12);
+                } elseif (preg_match('/\.com\b/i', $name)) {
+                    $monthly_breakdown[$month]['com']['count']++;
+                    $monthly_breakdown[$month]['com']['sum'] += ($price - 18);
+                }
+            }
+            
+            // SSL certifikáty
+            if (strpos($name, 'basic ssl') !== false) {
+                $monthly_breakdown[$month]['ssl']['count']++;
+                $monthly_breakdown[$month]['ssl']['sum'] += $price;
+            }
+            
+            // Hostingy
+            if (strpos($name, 'hosting') !== false) {
+                $monthly_breakdown[$month]['hosting']['count']++;
+                $monthly_breakdown[$month]['hosting']['sum'] += $price;
+            }
+        }
+    }
+
     if (!$db_dat) {
         return new WP_Error('db_error', 'DATA DB connection failed', ['status' => 500]);
     }
