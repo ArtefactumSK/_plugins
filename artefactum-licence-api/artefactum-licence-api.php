@@ -1773,7 +1773,7 @@ function artefactum_extended_statistics_shortcode($atts) {
             MONTH(datumexpiracie) as expiry_month
         FROM predplatenerocnesluzby
         WHERE YEAR(datumexpiracie) = YEAR(NOW())
-        AND nazovsluyby NOT LIKE '%NEPREDLŽOVAŤ%'
+        AND nazovsluyby NOT LIKE '%NEPREDLŽOVAŤ%' AND nazovsluyby NOT LIKE '%artefactum%' AND nazovsluyby NOT LIKE '%expressar%' AND nazovsluyby NOT LIKE '%artepaint%'
         ");
 
 
