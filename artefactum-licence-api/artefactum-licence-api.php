@@ -1183,7 +1183,8 @@ $monthly_breakdown = array_fill(1, 12, [
     'eu' => ['count' => 0, 'sum' => 0],
     'com' => ['count' => 0, 'sum' => 0],
     'ssl' => ['count' => 0, 'sum' => 0],
-    'hosting' => ['count' => 0, 'sum' => 0]
+    'hosting' => ['count' => 0, 'sum' => 0],
+    'special' => ['count' => 0, 'sum' => 0]
 ]);
 
 if (!empty($all_yearly_services)) {
@@ -1222,7 +1223,7 @@ if (!empty($all_yearly_services)) {
 
     ob_start();
     ?>
-    <div class="artefactum-licence-statistics" style="max-width:1200px; margin:40px auto; padding:20px; background:#fff; border:1px solid #e5e7eb; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+    <div class="artefactum-licence-statistics" style="margin:40px auto; padding:20px; background:#fff; border:1px solid #e5e7eb; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
         <h2 style="text-align:center; color:#f60; margin-bottom:30px;">
             📋 Artefactum Licenses
         </h2>
@@ -1696,7 +1697,7 @@ function artefactum_extended_statistics_shortcode($atts) {
     // === VÝSTUP HTML ===
     ob_start();
     ?>
-    <div class="arte-extended-stats" style="max-width:1400px;margin:40px auto;padding:20px;">
+    <div class="arte-extended-stats" style="padding:20px;">
         
         <h2 style="text-align:center;color:#f60;margin-bottom:30px;">
             📊 Artefactum - statistics
@@ -1783,7 +1784,8 @@ function artefactum_extended_statistics_shortcode($atts) {
             'eu' => ['count' => 0, 'sum' => 0],
             'com' => ['count' => 0, 'sum' => 0],
             'ssl' => ['count' => 0, 'sum' => 0],
-            'hosting' => ['count' => 0, 'sum' => 0]
+            'hosting' => ['count' => 0, 'sum' => 0],
+            'special' => ['count' => 0, 'sum' => 0]
         ]);
 
         if (!empty($all_yearly_services)) {
@@ -1817,6 +1819,12 @@ function artefactum_extended_statistics_shortcode($atts) {
                     $monthly_breakdown[$month]['hosting']['count']++;
                     $monthly_breakdown[$month]['hosting']['sum'] += $price;
                 }
+                
+                // Special
+                if (strpos($name, 'special') !== false) {
+                    $monthly_breakdown[$month]['special']['count']++;
+                    $monthly_breakdown[$month]['special']['sum'] += $price;
+                }
             }
         }
 
@@ -1826,7 +1834,8 @@ function artefactum_extended_statistics_shortcode($atts) {
 		    'eu' => 0,
 		    'com' => 0,
 		    'ssl' => 0,
-		    'hosting' => 0
+		    'hosting' => 0,
+            'special' => 0
 		];
 
 		if (!empty($all_yearly_services)) {
@@ -1853,6 +1862,11 @@ function artefactum_extended_statistics_shortcode($atts) {
 			if (strpos($name, 'hosting') !== false) {
 			    $yearly_counts['hosting']++;
 			}
+            
+            // Special
+            if (strpos($name, 'special') !== false) {
+                $yearly_counts['special']++;
+            }
 		    }
 		}
 
@@ -1880,8 +1894,124 @@ function artefactum_extended_statistics_shortcode($atts) {
 		}
 		?>
         </div>
-        <!-- MESAČNÝ ROZPAD PRÍJMOV -->
-    <div style="background:#fff;padding:20px;border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,0.1);margin:20px 0;">
+        
+    </div>
+        <!-- ZOZNAM TABULIEK -->
+        <div style="max-width:100%;">
+    
+    <!-- 🚨 NEUHRADENÉ FAKTÚRY -->
+    <?php if (!empty($unpaid_invoices)): ?>
+    <div style="background:#fff;padding:20px;border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,0.1);margin-bottom:20px;">
+        <h3 style="margin:0 0 15px 0;color:red;border-bottom:2px solid red;padding-bottom:8px;">
+            🚨 Neuhradené faktúry (TOP 20)
+        </h3>
+        <table class="arte-responsive-table" style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:10px !important;">
+            <thead>
+                <tr style="background-color: #c4b5ae;">
+                    <th style="background-color: #c4b5ae;padding:8px;text-align:left; font-size: 14px;font-weight: bold;">Klient</th>
+                    <th style="background-color: #c4b5ae;padding:8px;text-align:center; font-size: 14px;font-weight: bold;">Faktúra #</th>
+                    <th style="background-color: #c4b5ae;padding:8px;text-align:left; font-size: 14px;font-weight: bold;">Fakturované</th>
+                    <th style="background-color: #c4b5ae;padding:8px;text-align:right; font-size: 14px;font-weight: bold;">Dátum splatnosti</th>
+                    <th style="background-color: #c4b5ae;padding:8px;text-align:right; font-size: 14px;font-weight: bold;">Suma</th>
+                    <th style="background-color: #c4b5ae;padding:8px;text-align:right; font-size: 14px;font-weight: bold;">Po splatnosti</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($unpaid_invoices as $invoice): ?>
+                    <?php
+                    $overdue_color = $invoice->days_overdue < 0 ? '#6b7280' : ($invoice->days_overdue > 14 ? '#f60' : 'red');
+                    ?>
+                    <tr class="collapsed">
+                        <td data-label="Klient" style="padding:8px;">
+                            <code style="background:#f3f4f6;padding:2px 6px;border-radius:3px;font-size:12px;">
+                                <?php echo esc_html($invoice->companyname); ?>
+                            </code>
+                        </td>
+                        <td data-label="Faktúra #" style="padding:8px;text-align:center;">
+                            <strong><?php echo esc_html($invoice->slofaktry); ?></strong>
+                        </td>
+                        <td data-label="Fakturované" style="padding:8px;text-align:left;">
+                            <?php echo esc_html($invoice->popis); ?>
+                        </td>
+                        <td data-label="Splatnosť" style="padding:8px;text-align:right;">
+                            <?php echo date('d.m.Y', strtotime($invoice->dtumsplatnosti)); ?>
+                        </td>
+                        <td data-label="Suma" style="padding:8px;text-align:right;">
+                            <strong><?php echo number_format($invoice->hradacelkom, 2); ?> €</strong>
+                        </td>
+                        <td data-label="Po splatnosti" style="padding:8px;text-align:right;">
+                            <span style="color:<?php echo $overdue_color; ?>;font-weight:bold;">
+                                <?php echo $invoice->days_overdue; ?> dní
+                            </span>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+        
+        <div style="margin-top:15px;padding:12px 5px;background: linear-gradient(to right, rgba(196 181 174 / 16%),rgba(196 181 174 / 6%),rgba(196 181 174 / 0%));border-left:4px solid red;border-radius:4px;text-align:center;">
+            <span style="color:red;">Celková suma dlhu: <strong style="display:inline-block">- <?php echo number_format($unpaid_total, 2); ?> €</strong></span>
+        </div>
+    </div>
+    <?php endif; ?>
+    
+    <!-- 🚨 NEUHRADENÉ PREDFAKTÚRY -->
+    <?php if (!empty($unpaid_advanced)): ?>
+    <div style="background:#fff;padding:20px;border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,0.1);margin-bottom:20px;">
+        <h4 style="margin:0 0 15px 0;color:#dc2626;border-bottom:2px solid #dc2626;padding-bottom:8px;">
+            ‼ Neuhradené predfaktúry (TOP 20)
+        </h3>
+        <table class="arte-responsive-table" style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:10px !important;">
+            <thead>
+                <tr style="border-bottom:2px solid #e5e7eb;">
+                    <th style="background-color: #c4b5ae;padding:8px;text-align:left; font-size: 14px;font-weight: bold;">Klient</th>
+                    <th style="background-color: #c4b5ae;padding:8px;text-align:center; font-size: 14px;font-weight: bold;">Predfaktúra #</th>
+                    <th style="background-color: #c4b5ae;padding:8px;text-align:left; font-size: 14px;font-weight: bold;">Faktúrované</th>
+                    <th style="background-color: #c4b5ae;padding:8px;text-align:right; font-size: 14px;font-weight: bold;">Dátum splatnosti</th>
+                    <th style="background-color: #c4b5ae;padding:8px;text-align:right; font-size: 14px;font-weight: bold;">Suma</th>
+                    <th style="background-color: #c4b5ae;padding:8px;text-align:right; font-size: 14px;font-weight: bold;">Po splatnosti</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($unpaid_advanced as $advinvoice): ?>
+                    <?php
+                    $overdue_advcolor = $advinvoice->days_overdue > 30 ? '#dc2626' : 
+                                       ($advinvoice->days_overdue > 14 ? '#f60' : '#6b7280');
+                    ?>
+                    <tr class="collapsed">
+                        <td data-label="Klient" style="padding:8px;">
+                            <code style="background:#f3f4f6;padding:2px 6px;border-radius:3px;font-size:12px;">
+                                <?php echo esc_html($advinvoice->companyname); ?>
+                            </code>
+                        </td>
+                        <td data-label="Predfaktúra #" style="padding:8px;text-align:center;">
+                            <strong><?php echo esc_html($advinvoice->cislopredfaktury); ?></strong>
+                        </td>
+                        <td data-label="Fakturované" style="padding:8px;text-align:left;">
+                            <?php echo esc_html($advinvoice->popis); ?>
+                        </td>
+                        <td data-label="Splatnosť" style="padding:8px;text-align:right;">
+                            <?php echo date('d.m.Y', strtotime($advinvoice->datumsplatnosti)); ?>
+                        </td>
+                        <td data-label="Suma" style="padding:8px;text-align:right;">
+                            <strong><?php echo number_format($advinvoice->celkomsdph, 2); ?> €</strong>
+                        </td>
+                        <td data-label="Po splatnosti" style="padding:8px;text-align:right;">
+                            <span style="color:<?php echo $overdue_advcolor; ?>;font-weight:bold;">
+                                <?php echo $advinvoice->days_overdue; ?> dní
+                            </span>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+        
+        <div style="margin-top:15px;padding:12px 5px;background: linear-gradient(to right, rgba(196 181 174 / 16%),rgba(196 181 174 / 6%),rgba(196 181 174 / 0%));border-left:4px solid #dc2626;border-radius:4px;text-align:center;">
+			<span style="color:#991b1b;">Neuhradené predfaktúry celkom: <strong style="display:inline-block">- <?php echo number_format($unpaidadvanced_total, 2); ?> €</strong></span>
+        </div>
+    </div>	
+    <!-- MESAČNÝ ROZPAD PRÍJMOV -->
+    <div style="background:#fff;padding:20px 20px 0 20px;border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,0.1);margin:20px 0;">
         <h4 style="margin:0 0 15px 0;color:#f60;border-bottom:2px solid #f60;padding-bottom:8px;">
             📅 Predpokladané príjmy z ročných služieb
         </h4>
@@ -1890,11 +2020,11 @@ function artefactum_extended_statistics_shortcode($atts) {
             <table style="width:100%;font-size:12px;border-collapse:collapse;min-width:900px;margin-bottom:10px !important; ">
                 <thead>
                     <tr style="background:#c4b5ae;">
-                        <th style="background:#c4b5ae;padding:8px;text-align:left;border:1px solid #ddd;">Typ</th>
+                        <th style="background:#c4b5ae;padding:8px;text-align:left;border:1px solid #ddd;font-size: 14px;font-weight: bold;">Typ</th>
                         <?php
                         $months = ['Jan', 'Feb', 'Mar', 'Apr', 'Máj', 'Jún', 'Júl', 'Aug', 'Sep', 'Okt', 'Nov', 'Dec'];
                         foreach ($months as $m) {
-                            echo "<th style='background:#c4b5ae;padding:8px;text-align:center;border:1px solid #ddd;'>$m</th>";
+                            echo "<th style='background:#c4b5ae;padding:8px;text-align:center;border:1px solid #ddd;font-size: 14px;font-weight: bold;'>$m</th>";
                         }
                         ?>
                     </tr>
@@ -1906,7 +2036,8 @@ function artefactum_extended_statistics_shortcode($atts) {
 			    'eu' => ['label' => 'EU domény', 'color' => '#3b82f6'],
 			    'com' => ['label' => 'COM domény', 'color' => '#8b5cf6'],
 			    'ssl' => ['label' => 'SSL certifikáty', 'color' => '#f59e0b'],
-			    'hosting' => ['label' => 'Hostingy', 'color' => '#ef4444']
+			    'hosting' => ['label' => 'Hostingy', 'color' => '#ef4444'],
+                'special' => ['label' => 'Special', 'color' => '#6b7280']
 			];
 
 			foreach ($types as $key => $type) {
@@ -1945,7 +2076,7 @@ function artefactum_extended_statistics_shortcode($atts) {
                             $total_count = 0;
                             $total_sum = 0;
                             
-                            foreach (['sk', 'eu', 'com', 'ssl', 'hosting'] as $key) {
+                            foreach (['sk', 'eu', 'com', 'ssl', 'hosting', 'special'] as $key) {
                                 $total_count += $monthly_breakdown[$m][$key]['count'];
                                 $total_sum += $monthly_breakdown[$m][$key]['sum'];
                             }
@@ -1966,124 +2097,9 @@ function artefactum_extended_statistics_shortcode($atts) {
                 </tbody>
             </table>
             <!-- ROČNÝ CELKOVÝ SÚČET -->
-            <div style="padding:12px 5px;background:rgb(196 181 174 / 20%);border-left:4px solid #ff6600;border-radius:4px;text-align:center;margin:0;">  Predpokladaný ročný príjem celkom: <strong style="color:#10b981;font-size:18px;margin-left:10px;"><?php echo number_format($grand_total_sum, 2); ?> €</strong> <span style="padding-left:20px;color:#666;font-size:14px;">⍉ <?php echo number_format($grand_average_sum, 2); ?> € /mes.</span>
+            <div style="padding:12px 5px;background: linear-gradient(to right, rgba(196 181 174 / 16%),rgba(196 181 174 / 6%),rgba(196 181 174 / 0%));border-left:4px solid #ff6600;border-radius:4px;text-align:center;margin:0 0 20px 0;">  Predpokladaný ročný príjem celkom: <strong style="color:#10b981;font-size:18px;margin-left:10px;"><?php echo number_format($grand_total_sum, 2); ?> €</strong> <span style="padding-left:20px;color:#666;font-size:14px;">⍉ <?php echo number_format($grand_average_sum, 2); ?> € /mes.</span>
              </div>
         </div>
-    </div>
-        <!-- ZOZNAM TABULIEK -->
-        <div style="max-width:100%;margin-top:30px;">
-    
-    <!-- 🚨 NEUHRADENÉ FAKTÚRY -->
-    <?php if (!empty($unpaid_invoices)): ?>
-    <div style="background:#fff;padding:20px;border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,0.1);margin-bottom:20px;">
-        <h3 style="margin:0 0 15px 0;color:red;border-bottom:2px solid #dc2626;padding-bottom:8px;">
-            🚨 Neuhradené faktúry (TOP 20)
-        </h3>
-        <table class="arte-responsive-table" style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:10px !important;">
-            <thead>
-                <tr style="background-color: #c4b5ae;">
-                    <th style="background-color: #c4b5ae;padding:8px;text-align:left;">Klient</th>
-                    <th style="background-color: #c4b5ae;padding:8px;text-align:center;">Faktúra #</th>
-                    <th style="background-color: #c4b5ae;padding:8px;text-align:left;">Fakturované</th>
-                    <th style="background-color: #c4b5ae;padding:8px;text-align:right;">Dátum splatnosti</th>
-                    <th style="background-color: #c4b5ae;padding:8px;text-align:right;">Suma</th>
-                    <th style="background-color: #c4b5ae;padding:8px;text-align:right;">Dni po splatnosti</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($unpaid_invoices as $invoice): ?>
-                    <?php
-                    $overdue_color = $invoice->days_overdue < 0 ? '#6b7280' : ($invoice->days_overdue > 14 ? '#f60' : 'red');
-                    ?>
-                    <tr class="collapsed">
-                        <td data-label="Klient" style="padding:8px;">
-                            <code style="background:#f3f4f6;padding:2px 6px;border-radius:3px;font-size:12px;">
-                                <?php echo esc_html($invoice->companyname); ?>
-                            </code>
-                        </td>
-                        <td data-label="Faktúra #" style="padding:8px;text-align:center;">
-                            <strong><?php echo esc_html($invoice->slofaktry); ?></strong>
-                        </td>
-                        <td data-label="Fakturované" style="padding:8px;text-align:left;">
-                            <?php echo esc_html($invoice->popis); ?>
-                        </td>
-                        <td data-label="Splatnosť" style="padding:8px;text-align:right;">
-                            <?php echo date('d.m.Y', strtotime($invoice->dtumsplatnosti)); ?>
-                        </td>
-                        <td data-label="Suma" style="padding:8px;text-align:right;">
-                            <strong><?php echo number_format($invoice->hradacelkom, 2); ?> €</strong>
-                        </td>
-                        <td data-label="Po splatnosti" style="padding:8px;text-align:right;">
-                            <span style="color:<?php echo $overdue_color; ?>;font-weight:bold;">
-                                <?php echo $invoice->days_overdue; ?> dní
-                            </span>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-        
-        <div style="margin-top:15px;padding:12px 5px;background:rgba(196 181 174 / 15%);border-left:4px solid red;border-radius:4px;">
-            <span style="color:red;">Celková suma dlhu: <strong style="display:inline-block">- <?php echo number_format($unpaid_total, 2); ?> €</strong></span>
-        </div>
-    </div>
-    <?php endif; ?>
-    
-    <!-- 🚨 NEUHRADENÉ PREDFAKTÚRY -->
-    <?php if (!empty($unpaid_advanced)): ?>
-    <div style="background:#fff;padding:20px;border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,0.1);margin-bottom:20px;">
-        <h4 style="margin:0 0 15px 0;color:#dc2626;border-bottom:2px solid #dc2626;padding-bottom:8px;">
-            ‼ Neuhradené predfaktúry (TOP 20)
-        </h3>
-        <table class="arte-responsive-table" style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:10px !important;">
-            <thead>
-                <tr style="border-bottom:2px solid #e5e7eb;">
-                    <th style="background-color: #c4b5ae;padding:8px;text-align:left;">Klient</th>
-                    <th style="background-color: #c4b5ae;padding:8px;text-align:center;">Predfaktúra #</th>
-                    <th style="background-color: #c4b5ae;padding:8px;text-align:left;">Faktúrované</th>
-                    <th style="background-color: #c4b5ae;padding:8px;text-align:right;">Dátum splatnosti</th>
-                    <th style="background-color: #c4b5ae;padding:8px;text-align:right;">Suma</th>
-                    <th style="background-color: #c4b5ae;padding:8px;text-align:right;">Po splatnosti</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($unpaid_advanced as $advinvoice): ?>
-                    <?php
-                    $overdue_advcolor = $advinvoice->days_overdue > 30 ? '#dc2626' : 
-                                       ($advinvoice->days_overdue > 14 ? '#f60' : '#6b7280');
-                    ?>
-                    <tr class="collapsed">
-                        <td data-label="Klient" style="padding:8px;">
-                            <code style="background:#f3f4f6;padding:2px 6px;border-radius:3px;font-size:12px;">
-                                <?php echo esc_html($advinvoice->companyname); ?>
-                            </code>
-                        </td>
-                        <td data-label="Predfaktúra #" style="padding:8px;text-align:center;">
-                            <strong><?php echo esc_html($advinvoice->cislopredfaktury); ?></strong>
-                        </td>
-                        <td data-label="Fakturované" style="padding:8px;text-align:left;">
-                            <?php echo esc_html($advinvoice->popis); ?>
-                        </td>
-                        <td data-label="Splatnosť" style="padding:8px;text-align:right;">
-                            <?php echo date('d.m.Y', strtotime($advinvoice->datumsplatnosti)); ?>
-                        </td>
-                        <td data-label="Suma" style="padding:8px;text-align:right;">
-                            <strong><?php echo number_format($advinvoice->celkomsdph, 2); ?> €</strong>
-                        </td>
-                        <td data-label="Po splatnosti" style="padding:8px;text-align:right;">
-                            <span style="color:<?php echo $overdue_advcolor; ?>;font-weight:bold;">
-                                <?php echo $advinvoice->days_overdue; ?> dní
-                            </span>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-        
-        <div style="margin-top:15px;padding:12px 5px;background:#fee2e2;border-left:4px solid #dc2626;border-radius:4px;">
-			<span style="color:#991b1b;">Neuhradené predfaktúry celkom: <strong style="display:inline-block">- <?php echo number_format($unpaidadvanced_total, 2); ?> €</strong></span>
-        </div>
-    </div>	
     <?php endif; 
 
 	// ============================================================
@@ -2111,7 +2127,7 @@ function artefactum_extended_statistics_shortcode($atts) {
 		SELECT COUNT(*) FROM predplatenerocnesluzby
 	");
 	?>
-
+    </div>
 	<!-- PREHĽAD SLUŽIEB PODĽA TYPU -->
 		<div style="background:#fff;padding:20px;border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,0.1);margin-bottom:20px;">
 			<h3 style="margin:0 0 15px 0;color:#f60;border-bottom:2px solid #f60;padding-bottom:8px;">
@@ -2254,7 +2270,7 @@ function artefactum_extended_statistics_shortcode($atts) {
 	*/
 	?>
     
-        </div>
+        <!--</div>-->
         
     </div>
     
@@ -2363,6 +2379,12 @@ function artefactum_api_extended_stats($request) {
             if (strpos($name, 'hosting') !== false) {
                 $monthly_breakdown[$month]['hosting']['count']++;
                 $monthly_breakdown[$month]['hosting']['sum'] += $price;
+            }
+            
+            // Special
+            if (strpos($name, 'special') !== false) {
+                $monthly_breakdown[$month]['special']['count']++;
+                $monthly_breakdown[$month]['special']['sum'] += $price;
             }
         }
     }
