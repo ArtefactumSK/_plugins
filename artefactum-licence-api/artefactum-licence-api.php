@@ -1268,27 +1268,22 @@ if (!empty($all_yearly_services)) {
 
         <!-- Sekcia pre správy -->
         <div class="expirydomains">
+        <?php
+        $message_color = $msg->message_priority === 'danger' ? '#ef4444' : 
+                        ($msg->message_priority === 'warning' ? '#f60' : '#3b82f6');
+        $message_bg = $msg->message_priority === 'danger' ? '#fef2f2' : 
+                        ($msg->message_priority === 'warning' ? '#FCF8F7' : '#dbeafe');
+        ?>    
         <?php if ($global_message || !empty($domain_messages)): ?>
         <div class="arte-section">
-            <h4 style="margin: 0 0 15px 0; font-size: 18px; color: #374151; border-bottom: 2px solid #f60; padding-bottom: 8px;">📢 Správy k licenciám</h4>
-            <ul style="margin:0; padding-left:20px;">
+            <h4 style="margin: 0 0 15px 0; font-size: 18px; color: #f60; border-bottom: 2px solid #f60; padding-bottom: 8px;">📢 Správy k licenciám</h4>
+            <ul style="margin:0; padding-left:0; font-size: 12px; list-style-type: none;">
                 <?php if ($global_message): ?>
-                    <?php
-					$global_message->message_priority === 'warning' ? '#f60' : '#3b82f6';
-                    $message_bg = $global_message->message_priority === 'danger' ? '#fef2f2' : 
-                                  ($global_message->message_priority === 'warning' ? '#FCF8F7' : '#dbeafe');
-                    ?>
                     <li style="margin:5px 0; padding:8px; background:<?php echo $message_bg; ?>; border-left:4px solid <?php echo $message_color; ?>; border-radius:4px;">
-                        <strong>Globálna správa:</strong> <?php echo wp_kses_post($global_message->message); ?>
+                        <span style="text-transform:uppercase">Globálna správa:</span><br><?php echo wp_kses_post($global_message->message); ?>
                     </li>
                 <?php endif; ?>
-                <?php foreach ($domain_messages as $msg): ?>
-                    <?php
-                    $message_color = $msg->message_priority === 'danger' ? '#ef4444' : 
-                                    ($msg->message_priority === 'warning' ? '#f60' : '#3b82f6');
-                    $message_bg = $msg->message_priority === 'danger' ? '#fef2f2' : 
-                                  ($msg->message_priority === 'warning' ? '#FCF8F7' : '#dbeafe');
-                    ?>
+                <?php foreach ($domain_messages as $msg): ?>                    
                     <li style="margin:5px 0; padding:8px; background:<?php echo $message_bg; ?>; border-left:4px solid <?php echo $message_color; ?>; border-radius:4px;">
                         <a href="https://<?php echo $msg->domain; ?>" target="_blank"><?php echo esc_html($msg->domain); ?>:</a><br><span style="font-size:12px"><?php echo wp_kses_post($msg->message); ?></span>
                     </li>
@@ -1697,7 +1692,7 @@ function artefactum_extended_statistics_shortcode($atts) {
     // === VÝSTUP HTML ===
     ob_start();
     ?>
-    <div class="arte-extended-stats" style="padding:20px;">
+    <div class="arte-extended-stats" style="padding-top:20px;">
         
         <h2 style="text-align:center;color:#f60;margin-bottom:30px;">
             📊 Artefactum - statistics
@@ -1733,7 +1728,7 @@ function artefactum_extended_statistics_shortcode($atts) {
                 <?php 
                 if ($unpaid_total<1){echo '<small style="color:#666;">';}
                 else {echo '<small style="color:#dc2626">- <strong>';}           
-                echo number_format($unpaid_total, 2); ?></strong> €</small>
+                echo number_format($unpaid_total, 2, ',', ' ') . ' €'; ?></strong> €</small>
             </div>
             
             <!-- Neuhradené predfaktúry -->
@@ -1745,7 +1740,7 @@ function artefactum_extended_statistics_shortcode($atts) {
                 <?php 
                 if ($unpaidadvanced_total<1){echo '<small style="color:#666;">';}
                 else {echo '<small style="color:#dc2626">- <strong>';}
-                echo number_format($unpaidadvanced_total, 2); ?></strong> €</small>
+                echo number_format($unpaidadvanced_total, 2, ',', ' ') . ' €'; ?></strong> €</small>
             </div>
             
             <!-- Email účty -->
@@ -1889,13 +1884,80 @@ function artefactum_extended_statistics_shortcode($atts) {
 			echo '<span style="font-size:16px;color:#666;"> <strong style="color:#10b981;">' . $current_year . '</strong> - uhradené faktúry celkom: </span>';
 			echo '<strong style="font-size:18px;color:#10b981;margin-left:10px;display:inline-block">' . number_format($total_invoiced, 2, ',', ' ') . ' €</strong>';
 			echo '</div>';
+            
 		} else {
 			echo '<div style="background:#fee2e2;padding:15px;border-radius:5px;color:#991b1b;">⚠️ Chyba pripojenia k databáze</div>';
 		}
 		?>
-        </div>
-        
+        </div>       
     </div>
+    
+    <!-- MESAČNÝ PREHĽAD UHRADENÝCH FAKTÚR -->
+    <?php
+    $current_year = date('Y');
+    $db_dat = arte_get_extended_data_db();
+
+    if ($db_dat) {
+        echo '<div style="background:#fff;padding:20px;border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,0.1);margin-bottom:20px;">';
+        echo '<h5 style="margin:0 0 15px 0;color:#10b981;border-bottom:2px solid #10b981;padding-bottom:8px;">';
+        echo '📅 Mesačný prehľad uhradených faktúr za ' . $current_year;
+        echo '</h5>';
+        
+        echo '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
+        echo '<thead>';
+        echo '<tr style="background:#c4b5ae;color:#fff;">';
+        
+        $months = [
+            '01' => 'Január',
+            '02' => 'Február',
+            '03' => 'Marec',
+            '04' => 'Apríl',
+            '05' => 'Máj',
+            '06' => 'Jún',
+            '07' => 'Júl',
+            '08' => 'August',
+            '09' => 'September',
+            '10' => 'Október',
+            '11' => 'November',
+            '12' => 'December'
+        ];
+        
+        foreach ($months as $month_name) {
+            echo '<th style="background-color:#c4b5ae;padding:10px;text-align:center;border-right:1px solid #fff;">' . $month_name . '</th>';
+        }
+        
+        echo '</tr>';
+        echo '</thead>';
+        echo '<tbody>';
+        echo '<tr style="background:#f9fafb;">';
+        
+        foreach ($months as $month_num => $month_name) {
+            $monthly_total = $db_dat->get_var($db_dat->prepare("
+                SELECT COALESCE(SUM(hradacelkom), 0)
+                FROM invoicesartefactum
+                WHERE dtumhrady BETWEEN %s AND %s
+            ", 
+                $current_year . '-' . $month_num . '-01',
+                $current_year . '-' . $month_num . '-31'
+            ));
+            
+            $display_value = ($monthly_total > 0) 
+                ? '<span style="color:#f60;">' . number_format($monthly_total, 2, ',', ' ') . ' €</span>'
+                : '<span style="color:#999;">—</span>';
+            
+            echo '<td style="padding:12px;text-align:center;border-right:1px solid #e5e7eb;">' . $display_value . '</td>';
+        }
+        
+        echo '</tr>';
+        echo '</tbody>';
+        echo '</table>';
+        echo '</div>';
+    } else {
+        echo '<div style="background:#fee2e2;padding:15px;border-radius:5px;color:#991b1b;margin-top:20px;">⚠️ Chyba pripojenia k databáze (mesačný prehľad)</div>';
+    }
+    ?>
+    
+
         <!-- ZOZNAM TABULIEK -->
         <div style="max-width:100%;">
     
@@ -1937,7 +1999,7 @@ function artefactum_extended_statistics_shortcode($atts) {
                             <?php echo date('d.m.Y', strtotime($invoice->dtumsplatnosti)); ?>
                         </td>
                         <td data-label="Suma" style="padding:8px;text-align:right;">
-                            <strong><?php echo number_format($invoice->hradacelkom, 2); ?> €</strong>
+                            <strong><?php echo number_format($invoice->hradacelkom, 2, ',', ' ') . ' €'; ?></strong>
                         </td>
                         <td data-label="Po splatnosti" style="padding:8px;text-align:right;">
                             <span style="color:<?php echo $overdue_color; ?>;font-weight:bold;">
@@ -1950,7 +2012,7 @@ function artefactum_extended_statistics_shortcode($atts) {
         </table>
         
         <div style="margin-top:15px;padding:12px 5px;background: linear-gradient(to right, rgba(196 181 174 / 16%),rgba(196 181 174 / 6%),rgba(196 181 174 / 0%));border-left:4px solid red;border-radius:4px;text-align:center;">
-            <span style="color:red;">Celková suma dlhu: <strong style="display:inline-block">- <?php echo number_format($unpaid_total, 2); ?> €</strong></span>
+            <span style="color:red;">Celková suma dlhu: <strong style="display:inline-block">- <?php echo number_format($unpaid_total, 2, ',', ' ') . ' €'; ?></strong></span>
         </div>
     </div>
     <?php endif; ?>
@@ -1994,7 +2056,7 @@ function artefactum_extended_statistics_shortcode($atts) {
                             <?php echo date('d.m.Y', strtotime($advinvoice->datumsplatnosti)); ?>
                         </td>
                         <td data-label="Suma" style="padding:8px;text-align:right;">
-                            <strong><?php echo number_format($advinvoice->celkomsdph, 2); ?> €</strong>
+                            <strong><?php echo number_format($advinvoice->celkomsdph, 2, ',', ' ') . ' €'; ?></strong>
                         </td>
                         <td data-label="Po splatnosti" style="padding:8px;text-align:right;">
                             <span style="color:<?php echo $overdue_advcolor; ?>;font-weight:bold;">
@@ -2007,14 +2069,14 @@ function artefactum_extended_statistics_shortcode($atts) {
         </table>
         
         <div style="margin-top:15px;padding:12px 5px;background: linear-gradient(to right, rgba(196 181 174 / 16%),rgba(196 181 174 / 6%),rgba(196 181 174 / 0%));border-left:4px solid #dc2626;border-radius:4px;text-align:center;">
-			<span style="color:#991b1b;">Neuhradené predfaktúry celkom: <strong style="display:inline-block">- <?php echo number_format($unpaidadvanced_total, 2); ?> €</strong></span>
+			<span style="color:#991b1b;">Neuhradené predfaktúry celkom: <strong style="display:inline-block">- <?php echo number_format($unpaidadvanced_total, 2, ',', ' ') . ' €'; ?></strong></span>
         </div>
     </div>	
     <!-- MESAČNÝ ROZPAD PRÍJMOV -->
     <div style="background:#fff;padding:20px 20px 0 20px;border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,0.1);margin:20px 0;">
-        <h4 style="margin:0 0 15px 0;color:#f60;border-bottom:2px solid #f60;padding-bottom:8px;">
+        <h5 style="margin:0 0 15px 0;color:#f60;border-bottom:2px solid #f60;padding-bottom:8px;">
             📅 Predpokladané príjmy z ročných služieb
-        </h4>
+        </h5>
         
         <div style="overflow-x:auto;">
             <table style="width:100%;font-size:12px;border-collapse:collapse;min-width:900px;margin-bottom:10px !important; ">
@@ -2052,7 +2114,7 @@ function artefactum_extended_statistics_shortcode($atts) {
                             
                             if ($count > 0) {
                                 echo "<td style='color:#666;padding:8px 4px;border:1px solid #ddd;text-align:right;background:#f9fafb;'>";
-                                echo "({$count}) <span style='color:{$type['color']};'>" . number_format($sum, 2) . " €</span>";
+                                echo "({$count}) <span style='color:{$type['color']};'>" . number_format($sum, 2, ',', ' ') . " €</span>";
                                 echo "</td>";
                             } else {
                                 echo "<td style='padding:8px;border:1px solid #ddd;text-align:center;color:#ccc;'>-</td>";
@@ -2085,7 +2147,7 @@ function artefactum_extended_statistics_shortcode($atts) {
                             
                             if ($total_count > 0) {
                                 echo "<td style='color:#666;padding:10px 1px;border:1px solid #ddd;text-align:right;'>";
-                                echo "({$total_count}) " ."<strong style='color:#10b981;'>". number_format($total_sum, 2) . "</strong> €";
+                                echo "({$total_count}) " ."<strong style='color:#10b981;'>". number_format($total_sum, 2, ',', ' ') . "</strong> €";
                                 echo "</td>";
                             } else {
                                 echo "<td style='padding:10px;border:1px solid #ddd;text-align:center;color:#999;'>-</td>";
@@ -2097,7 +2159,7 @@ function artefactum_extended_statistics_shortcode($atts) {
                 </tbody>
             </table>
             <!-- ROČNÝ CELKOVÝ SÚČET -->
-            <div style="padding:12px 5px;background: linear-gradient(to right, rgba(196 181 174 / 16%),rgba(196 181 174 / 6%),rgba(196 181 174 / 0%));border-left:4px solid #ff6600;border-radius:4px;text-align:center;margin:0 0 20px 0;">  Predpokladaný ročný príjem celkom: <strong style="color:#10b981;font-size:18px;margin-left:10px;"><?php echo number_format($grand_total_sum, 2); ?> €</strong> <span style="padding-left:20px;color:#666;font-size:14px;">⍉ <?php echo number_format($grand_average_sum, 2); ?> € /mes.</span>
+            <div style="padding:12px 5px;background: linear-gradient(to right, rgba(196 181 174 / 16%),rgba(196 181 174 / 6%),rgba(196 181 174 / 0%));border-left:4px solid #ff6600;border-radius:4px;text-align:center;margin:0 0 20px 0;">  Predpokladaný ročný príjem celkom: <strong style="color:#10b981;font-size:18px;margin-left:10px;"><?php echo number_format($grand_total_sum, 2, ',', ' ') . ' €'; ?></strong> <span style="padding-left:20px;color:#666;font-size:14px;">⍉ <?php echo number_format($grand_average_sum, 2, ',', ' ') . ' € /mes.'; ?></span>
              </div>
         </div>
     <?php endif; 

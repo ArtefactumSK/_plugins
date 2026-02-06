@@ -1,0 +1,15 @@
+{
+  "folders": [
+    {
+      "name": "Artefactum – API/Statistics",
+      "path": "artefactum-licence-api"
+    },
+    {
+      "name": "Artefactum – client rating",
+      "path": "artefactum-rating"
+    }
+  ],
+  "settings": {
+    "git.autoRepositoryDetection": "openEditors"
+  }
+}
