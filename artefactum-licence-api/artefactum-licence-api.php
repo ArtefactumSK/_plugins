@@ -1126,7 +1126,7 @@ function artefactum_licence_statistics_shortcode($atts) {
     $licences = $wpdb->get_results("SELECT * FROM {$wpdb->licences} ORDER BY created_at DESC");
     
     if (empty($licences)) {
-        return '<div style="background:#FCF8F7; padding:20px; border-radius:6px; border-left:4px solid #f60;border-radius: 9px 0 9px 9px;">
+        return '<div style="background:#FCF8F7; padding:20px; border-radius:6px; border-left:4px solid #f60;">
                     <p style="color:#92400e; margin:0;">ℹ️ Žiadne licencie neboli nájdené.</p>
                 </div>';
     }
