@@ -1769,7 +1769,11 @@ function artefactum_extended_statistics_shortcode($atts) {
             MONTH(datumexpiracie) as expiry_month
         FROM predplatenerocnesluzby
         WHERE YEAR(datumexpiracie) = YEAR(NOW())
-        AND nazovsluyby NOT LIKE '%NEPREDLŽOVAŤ%' AND nazovsluyby NOT LIKE '%artefactum%' AND nazovsluyby NOT LIKE '%expressar%' AND nazovsluyby NOT LIKE '%artepaint%'
+        AND nazovsluyby NOT LIKE '%NEPREDLŽOVAŤ%' 
+        AND nazovsluyby NOT LIKE '%artefactum%' 
+        AND nazovsluyby NOT LIKE '%expressar%' 
+        AND nazovsluyby NOT LIKE '%artepaint%' 
+        AND nazovsluyby NOT LIKE '%STOP%'
         ");
 
 
@@ -1891,71 +1895,159 @@ function artefactum_extended_statistics_shortcode($atts) {
 		?>
         </div>       
     </div>
-    
-    <!-- MESAČNÝ PREHĽAD UHRADENÝCH FAKTÚR -->
+    <!-- MESAČNÝ PREHĽAD VÝDAVKOV + BILANCIA -->
     <?php
-    $current_year = date('Y');
-    $db_dat = arte_get_extended_data_db();
+    $db_dat_costs = arte_get_extended_data_db();
+    if ($db_dat_costs) {
 
-    if ($db_dat) {
-        echo '<div style="background:#fff;padding:20px;border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,0.1);margin-bottom:20px;">';
-        echo '<h5 style="margin:0 0 15px 0;color:#10b981;border-bottom:2px solid #10b981;padding-bottom:8px;">';
-        echo '📅 Mesačný prehľad uhradených faktúr za ' . $current_year;
-        echo '</h5>';
-        
-        echo '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
-        echo '<thead>';
-        echo '<tr style="background:#c4b5ae;color:#fff;">';
-        
         $months = [
-            '01' => 'Január',
-            '02' => 'Február',
-            '03' => 'Marec',
-            '04' => 'Apríl',
-            '05' => 'Máj',
-            '06' => 'Jún',
-            '07' => 'Júl',
-            '08' => 'August',
-            '09' => 'September',
-            '10' => 'Október',
-            '11' => 'November',
-            '12' => 'December'
+            '01' => 'Január', '02' => 'Február', '03' => 'Marec',
+            '04' => 'April',  '05' => 'Máj',     '06' => 'Jún',
+            '07' => 'Júl',    '08' => 'August',   '09' => 'September',
+            '10' => 'Október','11' => 'November', '12' => 'December'
         ];
-        
-        foreach ($months as $month_name) {
-            echo '<th style="background-color:#c4b5ae;padding:10px;text-align:center;border-right:1px solid #fff;">' . $month_name . '</th>';
+
+        // Načítaj príjmy aj výdavky pre každý mesiac
+        $prijmy   = [];
+        $vydavky  = [];
+
+        // Pre výpočet celkovej bilancie k aktuálnemu dátumu
+        $current_month = date('m');
+        $current_day = (int)date('d');
+        $today = date('Y-m-d');
+
+        $celkove_prijmy = 0;
+        $celkove_vydavky = 0;
+
+        foreach ($months as $m => $name) {
+            if ($m < $current_month) {
+                // celý mesiac
+                $prijmy[$m] = (float) $db_dat_costs->get_var($db_dat_costs->prepare("
+                    SELECT COALESCE(SUM(hradacelkom), 0)
+                    FROM invoicesartefactum
+                    WHERE dtumhrady BETWEEN %s AND %s
+                ",
+                    $current_year . '-' . $m . '-01',
+                    $current_year . '-' . $m . '-31'
+                ));
+
+                $vydavky[$m] = (float) $db_dat_costs->get_var($db_dat_costs->prepare("
+                    SELECT COALESCE(SUM(faktrovancena), 0)
+                    FROM costsartefactum
+                    WHERE uhraden BETWEEN %s AND %s
+                ",
+                    $current_year . '-' . $m . '-01',
+                    $current_year . '-' . $m . '-31'
+                ));
+            } elseif ($m == $current_month) {
+                // len po dnešný deň v aktuálnom mesiaci
+                $prijmy[$m] = (float) $db_dat_costs->get_var($db_dat_costs->prepare("
+                    SELECT COALESCE(SUM(hradacelkom), 0)
+                    FROM invoicesartefactum
+                    WHERE dtumhrady BETWEEN %s AND %s
+                ",
+                    $current_year . '-' . $m . '-01',
+                    $today
+                ));
+
+                $vydavky[$m] = (float) $db_dat_costs->get_var($db_dat_costs->prepare("
+                    SELECT COALESCE(SUM(faktrovancena), 0)
+                    FROM costsartefactum
+                    WHERE uhraden BETWEEN %s AND %s
+                ",
+                    $current_year . '-' . $m . '-01',
+                    $today
+                ));
+            } else {
+                // budúce mesiace – nezarátaj nič
+                $prijmy[$m] = 0;
+                $vydavky[$m] = 0;
+            }
+
+            // Sumuj do celkovej bilancie len mesiace doteraz (vrátane aktuálneho mesiaca po dnešok)
+            if (
+                ($m < $current_month)
+                || ($m == $current_month)
+            ) {
+                $celkove_prijmy += $prijmy[$m];
+                $celkove_vydavky += $vydavky[$m];
+            }
         }
-        
+        $celkova_bilancia = $celkove_prijmy - $celkove_vydavky;
+
+        echo '<div style="background:#fff;padding:20px;border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,0.1);margin-top:20px;overflow-x:auto;">';
+        echo '<h5 style="margin:0 0 15px 0;color:#10b981;border-bottom:2px solid #10b981;padding-bottom:8px;">📅 Mesačný prehľad uhradených/výdavkových položiek za ' . $current_year . '</h5>';
+
+        // Nastav rovnakú šírku pre každý mesiac (8.3333%)
+        $th_td_style = 'width:8.3333%;background-color:#c4b5ae;padding:10px;text-align:center;border-right:1px solid #fff;color:#fff;font-size: 14px;';
+
+        echo '<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:900px;">';
+        echo '<thead>';
+        echo '<tr style="background:#c4b5ae;">';
+        foreach ($months as $m => $name) {
+            echo '<th style="' . $th_td_style . '">' . $name . '</th>';
+        }
         echo '</tr>';
         echo '</thead>';
         echo '<tbody>';
-        echo '<tr style="background:#f9fafb;">';
-        
-        foreach ($months as $month_num => $month_name) {
-            $monthly_total = $db_dat->get_var($db_dat->prepare("
-                SELECT COALESCE(SUM(hradacelkom), 0)
-                FROM invoicesartefactum
-                WHERE dtumhrady BETWEEN %s AND %s
-            ", 
-                $current_year . '-' . $month_num . '-01',
-                $current_year . '-' . $month_num . '-31'
-            ));
-            
-            $display_value = ($monthly_total > 0) 
-                ? '<span style="color:#f60;">' . number_format($monthly_total, 2, ',', ' ') . ' €</span>'
+
+        // Riadok 1: PRÍJMY
+        echo '<tr style="background:#f0fdf4;">';
+        foreach ($months as $m => $name) {
+            $val = $prijmy[$m];
+            echo '<td style="width:8.3333%;padding:10px;text-align:center;border-right:1px solid #e5e7eb;">';
+            echo $val > 0
+                ? '<span style="color:#10b981;">' . number_format($val, 2, ',', ' ') . ' €</span>'
                 : '<span style="color:#999;">—</span>';
-            
-            echo '<td style="padding:12px;text-align:center;border-right:1px solid #e5e7eb;">' . $display_value . '</td>';
+            echo '</td>';
         }
-        
         echo '</tr>';
+
+        // Riadok 2: VÝDAVKY (so znamienkom -)
+        echo '<tr style="background:#fff5f5;">';
+        foreach ($months as $m => $name) {
+            $val = $vydavky[$m];
+            echo '<td style="width:8.3333%;padding:10px;text-align:center;border-right:1px solid #e5e7eb;">';
+            echo $val > 0
+                ? '<span style="color:#dc2626;">− ' . number_format($val, 2, ',', ' ') . ' €</span>'
+                : '<span style="color:#999;">—</span>';
+            echo '</td>';
+        }
+        echo '</tr>';
+
+        // Riadok 3: BILANCIA (príjmy - výdavky)
+        echo '<tr style="background:#f8f9fa;border-top:1px solid #f60;">';
+        foreach ($months as $m => $name) {
+            $bilancia = $prijmy[$m] - $vydavky[$m];
+            $color = $bilancia > 0 ? '#10b981' : ($bilancia < 0 ? '#dc2626' : '#999');
+            echo '<td style="width:8.3333%;padding:10px;text-align:center;border-right:1px solid #e5e7eb;">';
+            if ($prijmy[$m] == 0 && $vydavky[$m] == 0) {
+                echo '<span style="color:#999;">—</span>';
+            } else {
+                if ($bilancia < 0) {
+                    echo '<strong style="color:' . $color . ';">− ' . number_format(abs($bilancia), 2, ',', ' ') . ' €</strong>';
+                } else {
+                    echo '<strong style="color:' . $color . ';">' . number_format($bilancia, 2, ',', ' ') . ' €</strong>';
+                } 
+            }
+            echo '</td>';
+        }
+        echo '</tr>';
+
         echo '</tbody>';
         echo '</table>';
+
+        // Legenda s vypočítanou celkovou bilanciou
+        echo '<div style="margin-top:10px;font-size:11px;color:#666;display:flex;gap:20px;">';
+        echo '<span style="color:#10b981;">■ Príjmy (vystavené/uhradené faktúry)</span>';
+        echo '<span style="color:#dc2626;">■ Výdavky (len fakturované výdavky)</span>';
+        echo '<span style="color:#374151;"><font style="color:#f60;">■</font> Artefactum - aktuálna bilancia &plusmn; <strong style="color:' . ($celkova_bilancia > 0 ? '#10b981' : ($celkova_bilancia < 0 ? '#dc2626' : '#999')) . ';">' . number_format($celkova_bilancia, 2, ',', ' ') . ' €</strong></span>';
         echo '</div>';
-    } else {
-        echo '<div style="background:#fee2e2;padding:15px;border-radius:5px;color:#991b1b;margin-top:20px;">⚠️ Chyba pripojenia k databáze (mesačný prehľad)</div>';
+
+        echo '</div>';
     }
     ?>
+    
     
 
         <!-- ZOZNAM TABULIEK -->
@@ -2075,18 +2167,30 @@ function artefactum_extended_statistics_shortcode($atts) {
     <!-- MESAČNÝ ROZPAD PRÍJMOV -->
     <div style="background:#fff;padding:20px 20px 0 20px;border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,0.1);margin:20px 0;">
         <h5 style="margin:0 0 15px 0;color:#f60;border-bottom:2px solid #f60;padding-bottom:8px;">
-            📅 Predpokladané príjmy z ročných služieb
+            📅 Predpokladané budúce príjmy z ročných služieb
         </h5>
         
         <div style="overflow-x:auto;">
+            <?php
+                // Zistiť aktuálny mesiac
+                $current_month = (int)date('n'); // 1=Jan, ..., 12=Dec
+                $months_all = ['Jan', 'Feb', 'Mar', 'Apr', 'Máj', 'Jún', 'Júl', 'Aug', 'Sep', 'Okt', 'Nov', 'Dec'];
+                $visible_month_indexes = [];
+                // Iba mesiace budúcnosti (čísla mesiacov väčšie než aktuálny mesiac, napr. ak je 2, tak 3-12)
+                for ($m = 1; $m <= 12; $m++) {
+                    if ($m > $current_month) {
+                        $visible_month_indexes[] = $m;
+                    }
+                }
+            ?>
             <table style="width:100%;font-size:12px;border-collapse:collapse;min-width:900px;margin-bottom:10px !important; ">
                 <thead>
                     <tr style="background:#c4b5ae;">
                         <th style="background:#c4b5ae;padding:8px;text-align:left;border:1px solid #ddd;font-size: 14px;font-weight: bold;">Typ</th>
                         <?php
-                        $months = ['Jan', 'Feb', 'Mar', 'Apr', 'Máj', 'Jún', 'Júl', 'Aug', 'Sep', 'Okt', 'Nov', 'Dec'];
-                        foreach ($months as $m) {
-                            echo "<th style='background:#c4b5ae;padding:8px;text-align:center;border:1px solid #ddd;font-size: 14px;font-weight: bold;'>$m</th>";
+                        foreach ($visible_month_indexes as $m) {
+                            $mname = $months_all[$m-1];
+                            echo "<th style='background:#c4b5ae;padding:8px;text-align:center;border:1px solid #ddd;font-size: 14px;font-weight: bold;'>$mname</th>";
                         }
                         ?>
                     </tr>
@@ -2094,24 +2198,22 @@ function artefactum_extended_statistics_shortcode($atts) {
                 <tbody>
                     <?php
                     $types = [
-			    'sk' => ['label' => 'SK domény', 'color' => '#10b981'],
-			    'eu' => ['label' => 'EU domény', 'color' => '#3b82f6'],
-			    'com' => ['label' => 'COM domény', 'color' => '#8b5cf6'],
-			    'ssl' => ['label' => 'SSL certifikáty', 'color' => '#f59e0b'],
-			    'hosting' => ['label' => 'Hostingy', 'color' => '#ef4444'],
-                'special' => ['label' => 'Special', 'color' => '#6b7280']
-			];
+                        'sk' => ['label' => 'SK domény', 'color' => '#10b981'],
+                        'eu' => ['label' => 'EU domény', 'color' => '#3b82f6'],
+                        'com' => ['label' => 'COM domény', 'color' => '#8b5cf6'],
+                        'ssl' => ['label' => 'SSL certifikáty', 'color' => '#f59e0b'],
+                        'hosting' => ['label' => 'Hostingy', 'color' => '#ef4444'],
+                        'special' => ['label' => 'Special', 'color' => '#6b7280']
+                    ];
 
-			foreach ($types as $key => $type) {
-			    echo "<tr>";
-			    echo "<td style='padding:8px;border:1px solid #ddd;font-weight:bold;color:{$type['color']};'>";
-			    echo "{$type['label']} <span style='color:#666;font-weight:normal;'>({$yearly_counts[$key]})</span>";
-			    echo "</td>";
-                        
-                        for ($m = 1; $m <= 12; $m++) {
+                    foreach ($types as $key => $type) {
+                        echo "<tr>";
+                        echo "<td style='padding:8px;border:1px solid #ddd;font-weight:bold;color:{$type['color']};'>";
+                        echo "{$type['label']} <span style='color:#666;font-weight:normal;'>({$yearly_counts[$key]})</span>";
+                        echo "</td>";
+                        foreach ($visible_month_indexes as $m) {
                             $count = $monthly_breakdown[$m][$key]['count'];
                             $sum = $monthly_breakdown[$m][$key]['sum'];
-                            
                             if ($count > 0) {
                                 echo "<td style='color:#666;padding:8px 4px;border:1px solid #ddd;text-align:right;background:#f9fafb;'>";
                                 echo "({$count}) <span style='color:{$type['color']};'>" . number_format($sum, 2, ',', ' ') . " €</span>";
@@ -2126,25 +2228,22 @@ function artefactum_extended_statistics_shortcode($atts) {
                     
                     <!-- HORIZONTÁLNA ČIARA -->
                     <tr style="background:#e5e7eb;">
-                        <td colspan="13" style="padding:1px;"></td>
+                        <td colspan="<?php echo count($visible_month_indexes)+1; ?>" style="padding:1px;"></td>
                     </tr>
                     <!-- CELKOM ZA MESIAC -->
                     <tr style="background:transparent;">
                         <td style="padding:10px;border:1px solid #ddd;color:#374151;">CELKOM</td>
                         <?php
                         $grand_total_sum = 0; // Globálny súčet
-                        
-                        for ($m = 1; $m <= 12; $m++) {
+                        $months_with_data = 0;
+                        foreach ($visible_month_indexes as $m) {
                             $total_count = 0;
                             $total_sum = 0;
-                            
                             foreach (['sk', 'eu', 'com', 'ssl', 'hosting', 'special'] as $key) {
                                 $total_count += $monthly_breakdown[$m][$key]['count'];
                                 $total_sum += $monthly_breakdown[$m][$key]['sum'];
                             }
-                            
                             $grand_total_sum += $total_sum; // Pripočítaj k celkovému súčtu
-                            
                             if ($total_count > 0) {
                                 echo "<td style='color:#666;padding:10px 1px;border:1px solid #ddd;text-align:right;'>";
                                 echo "({$total_count}) " ."<strong style='color:#10b981;'>". number_format($total_sum, 2, ',', ' ') . "</strong> €";
@@ -2152,15 +2251,26 @@ function artefactum_extended_statistics_shortcode($atts) {
                             } else {
                                 echo "<td style='padding:10px;border:1px solid #ddd;text-align:center;color:#999;'>-</td>";
                             }
+                            $months_with_data++;
                         }
-                        $grand_average_sum = $grand_total_sum / 12;
+                        // prípad ak nulový prepad (všetky mesiace prešli - ako fallback ochrana pred delením 0)
+                        $grand_average_sum = ($months_with_data > 0) ? ($grand_total_sum / $months_with_data) : 0;
                         ?>
                     </tr>
                 </tbody>
             </table>
             <!-- ROČNÝ CELKOVÝ SÚČET -->
-            <div style="padding:12px 5px;background: linear-gradient(to right, rgba(196 181 174 / 16%),rgba(196 181 174 / 6%),rgba(196 181 174 / 0%));border-left:4px solid #ff6600;border-radius:4px;text-align:center;margin:0 0 20px 0;">  Predpokladaný ročný príjem celkom: <strong style="color:#10b981;font-size:18px;margin-left:10px;"><?php echo number_format($grand_total_sum, 2, ',', ' ') . ' €'; ?></strong> <span style="padding-left:20px;color:#666;font-size:14px;">⍉ <?php echo number_format($grand_average_sum, 2, ',', ' ') . ' € /mes.'; ?></span>
-             </div>
+            <div style="padding:12px 5px;background: linear-gradient(to right, rgba(196 181 174 / 16%),rgba(196 181 174 / 6%),rgba(196 181 174 / 0%));border-left:4px solid #ff6600;border-radius:4px;text-align:center;margin:0 0 20px 0;">  
+                Predpokladaný ročný príjem celkom: 
+                <strong style="color:#10b981;font-size:18px;margin-left:10px;">
+                    <?php echo number_format($grand_total_sum, 2, ',', ' ') . ' €'; ?>
+                </strong> 
+                <?php if ($months_with_data > 0): ?>
+                    <span style="padding-left:20px;color:#666;font-size:14px;">
+                        ⍉ <?php echo number_format($grand_average_sum, 2, ',', ' ') . ' € /mes.'; ?>
+                    </span>
+                <?php endif; ?>
+            </div>
         </div>
     <?php endif; 
 
