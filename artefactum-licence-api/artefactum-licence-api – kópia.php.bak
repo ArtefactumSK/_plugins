@@ -906,7 +906,7 @@ function artefactum_admin_page() {
         <hr class="wp-header-end">
         
         <!-- FORMULÁR -->
-        <div class="artefactum-licence-form-wrapper" style="background:#fff; padding:20px; margin:20px 0; border:1px solid #ccd0d4; box-shadow:0 1px 1px rgba(0,0,0,.04);">
+        <div style="background:#fff; padding:20px; margin:20px 0; border:1px solid #ccd0d4; box-shadow:0 1px 1px rgba(0,0,0,.04);">
             <h2><?php echo $edit_licence ? '✏️ Upraviť licenciu' : '➕ Pridať novú licenciu'; ?></h2>
             
             <form method="POST">
@@ -920,32 +920,26 @@ function artefactum_admin_page() {
                     <!-- RIADOK 1: Doména, Licenčný kľúč, Dátum expirácie CORE -->
                     <tr>
                         <td colspan="6">
-                            <div class="af-row-1" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;">
-                                <div class="af-field">
-                                    <label class="af-label" for="domain">Doména <span style="color:#d63638;">*</span></label>
-                                    <div class="af-control">
-                                        <input type="text" name="domain" id="domain" class="regular-text" required 
-                                               value="<?php echo $edit_licence ? esc_attr($edit_licence->domain) : ''; ?>"
-                                               placeholder="example.com alebo *.example.com">
-                                    </div>
-                                    <p class="af-desc description">Pre wildcard použite <code>*.domena.sk</code></p>
+                            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;">
+                                <div class="af-col">
+                                    <label for="domain">Doména <span style="color:#d63638;">*</span></label>
+                                    <input type="text" name="domain" id="domain" class="regular-text" required 
+                                           value="<?php echo $edit_licence ? esc_attr($edit_licence->domain) : ''; ?>"
+                                           placeholder="example.com alebo *.example.com">
+                                    <p class="description">Pre wildcard použite <code>*.domena.sk</code></p>
                                 </div>
-                                <div class="af-field">
-                                    <label class="af-label" for="license_key">Licenčný kľúč</label>
-                                    <div class="af-control">
-                                        <input type="text" name="license_key" id="license_key" class="regular-text"
-                                               value="<?php echo $edit_licence ? esc_attr($edit_licence->license_key) : ''; ?>"
-                                               placeholder="">
-                                    </div>
-                                    <p class="af-desc description">Automaticky vygeneruje, ak je pole prázdne.</p>
+                                <div class="af-col">
+                                    <label for="license_key">Licenčný kľúč</label>
+                                    <input type="text" name="license_key" id="license_key" class="regular-text"
+                                           value="<?php echo $edit_licence ? esc_attr($edit_licence->license_key) : ''; ?>"
+                                           placeholder="">
+                                    <p class="description">Automaticky vygeneruje, ak je pole prázdne.</p>
                                 </div>
-                                <div class="af-field">
-                                    <label class="af-label" for="expiry_date">Dátum expirácie CORE</label>
-                                    <div class="af-control">
-                                        <input type="date" name="expiry_date" id="expiry_date"
-                                               value="<?php echo $edit_licence ? esc_attr($edit_licence->expiry_date) : ''; ?>">
-                                    </div>
-                                    <p class="af-desc description">Nechajte prázdne pre neobmedzenu licenciu (∞)</p>
+                                <div class="af-col">
+                                    <label for="expiry_date">Dátum expirácie CORE</label>
+                                    <input type="date" name="expiry_date" id="expiry_date"
+                                           value="<?php echo $edit_licence ? esc_attr($edit_licence->expiry_date) : ''; ?>">
+                                    <p class="description">Nechajte prázdne pre neobmedzenu licenciu (∞)</p>
                                 </div>
                             </div>
                         </td>
@@ -994,22 +988,22 @@ function artefactum_admin_page() {
                     <!-- RIADOK 3: Meno klienta, Kontaktné email(y) -->
                     <tr>
                         <td colspan="6">
-                            <div class="af-row-3" style="display:grid;grid-template-columns:repeat(2,1fr);gap:20px;">
-                                <div class="af-field">
-                                    <label class="af-label" for="client_name">Meno klienta</label>
-                                    <div class="af-control">
-                                        <input type="text" name="client_name" id="client_name" class="regular-text"
-                                               value="<?php echo $edit_licence ? esc_attr($edit_licence->client_name) : ''; ?>">
-                                    </div>
+                            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;">
+                                <div class="af-col">
+                                    <label for="client_name">Meno klienta</label>
+                                    <input type="text" name="client_name" id="client_name" class="regular-text"
+                                           value="<?php echo $edit_licence ? esc_attr($edit_licence->client_name) : ''; ?>">
+                                    <p class="description"></p>
                                 </div>
-                                <div class="af-field">
-                                    <label class="af-label" for="contact_email">Kontaktné email(y)</label>
-                                    <div class="af-control">
-                                        <input type="text" name="contact_email" id="contact_email" class="regular-text"
-                                               value="<?php echo $edit_licence ? esc_attr($edit_licence->contact_email) : ''; ?>"
-                                               placeholder="email1@example.com, email2@example.com">
-                                    </div>
-                                    <p class="af-desc description">Viacero emailov oddeľte čiarkou</p>
+                                <div class="af-col">
+                                    <label for="contact_email">Kontaktné email(y)</label>
+                                    <input type="text" name="contact_email" id="contact_email" class="regular-text"
+                                           value="<?php echo $edit_licence ? esc_attr($edit_licence->contact_email) : ''; ?>"
+                                           placeholder="email1@example.com, email2@example.com">
+                                    <p class="description">Viacero emailov oddeľte čiarkou</p>
+                                </div>
+                                <div class="af-col">
+                                    <!-- Prázdny stĺpec -->
                                 </div>
                             </div>
                         </td>
@@ -1105,36 +1099,6 @@ function artefactum_admin_page() {
                 </p>
             </form>
         </div>
-        
-        <style>
-        /* Scoped CSS pre formulár úpravy licencie */
-        .artefactum-licence-form-wrapper .af-field {
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .artefactum-licence-form-wrapper .af-label {
-            display: block;
-            margin-bottom: 6px;
-            font-weight: 600;
-        }
-        
-        .artefactum-licence-form-wrapper .af-control {
-            display: block;
-        }
-        
-        .artefactum-licence-form-wrapper .af-control input,
-        .artefactum-licence-form-wrapper .af-control select,
-        .artefactum-licence-form-wrapper .af-control textarea {
-            display: block;
-            width: 100%;
-        }
-        
-        .artefactum-licence-form-wrapper .af-desc {
-            margin-top: 6px;
-            margin-bottom: 0;
-        }
-        </style>
         
         <!-- TABUĽKA LICENCIÍ -->
         <h2>Existujúce licencie (<?php echo count($licences); ?>)</h2>
