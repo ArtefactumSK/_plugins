@@ -4,7 +4,7 @@
  * Description: REST API pre kontrolu licencií + wpDataTables integrácia
  * Version: 4.1 - Fixed Responsive Tables
  */
-
+error_log('ARTEFACTUM API PLUGIN INIT');
 // Bezpečnostný token (zmeň na vlastný náhodný string)
 define('ARTEFACTUM_API_SECRET', 'ART-MH8T-R13N-2938-O9JA-7RD9');
 
@@ -16,16 +16,56 @@ $wpdb->clients = 'wp_magic2_artefactum_clients';
 $wpdb->api_logs = 'wp_magic2_artefactum_api_logs';
 $wpdb->license_modules = 'wp_magic2_artefactum_license_modules';
 
+// Audit DB schémy (len pre WP_DEBUG)
+if (defined('WP_DEBUG') && WP_DEBUG) {
+    add_action('init', function() {
+        global $wpdb;
+        static $audit_logged = false;
+        if ($audit_logged) return;
+        $audit_logged = true;
+        
+        $db_name = DB_NAME;
+        $table_name = $wpdb->licences;
+        
+        error_log("[ARTEFACTUM API AUDIT] DB_NAME: {$db_name}");
+        error_log("[ARTEFACTUM API AUDIT] Table: {$table_name}");
+        
+        // Získanie stĺpcov tabuľky
+        $columns = $wpdb->get_results("SHOW COLUMNS FROM {$table_name}", ARRAY_A);
+        if ($columns) {
+            $column_names = array_column($columns, 'Field');
+            error_log("[ARTEFACTUM API AUDIT] Columns: " . implode(', ', $column_names));
+        } else {
+            error_log("[ARTEFACTUM API AUDIT] WARNING: Table {$table_name} not found or no columns");
+        }
+        
+        // Kontrola license_modules tabuľky
+        $modules_table = $wpdb->license_modules;
+        $modules_exists = $wpdb->get_var("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = '{$modules_table}'");
+        error_log("[ARTEFACTUM API AUDIT] license_modules table exists: " . ($modules_exists ? 'YES' : 'NO'));
+    }, 1);
+}
+
 /**
  * Registrácia REST API endpointu
  */
 add_action('rest_api_init', function() {
+    // Diagnostika REST API registrácie (len pre WP_DEBUG)
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[ARTEFACTUM API] rest_api_init fired');
+    }
+    
     // Existujúci endpoint
     register_rest_route('artefactum/v1', '/licence-check', [
         'methods' => 'POST',
         'callback' => 'artefactum_api_check_licence',
         'permission_callback' => '__return_true'
     ]);
+    
+    // Logovanie zaregistrovaných routes (len pre WP_DEBUG)
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[ARTEFACTUM API] Route artefactum/v1/licence-check registered');
+    }
 
     // Endpoint: Kontrola licencie podľa UID
     register_rest_route('artefactum/v1', '/license-status', [
@@ -268,13 +308,13 @@ function artefactum_api_client_info($request) {
 
 /**
  * API callback funkcia
+ * OPRAVENÉ: Hľadá core licenciu podľa domény bez závislosti na product_code
  */
 function artefactum_api_check_licence($request) {
     global $wpdb;
     
     $domain = sanitize_text_field($request->get_param('domain'));
     $token = sanitize_text_field($request->get_param('token'));
-    $product_code = sanitize_text_field($request->get_param('product_code') ?: 'theme_core');
     $admin_email = sanitize_email($request->get_param('admin_email'));
     $filter_by_email = sanitize_email($request->get_param('filter_by_email'));
     
@@ -295,13 +335,25 @@ function artefactum_api_check_licence($request) {
 
     $is_subdomain = count($parts) > 2;
     
-    // Funkcia na vyhľadanie licencie s daným product_code
-    $find_licence = function($product_code_to_search) use ($wpdb, $domain, $wildcard_domain, $root_domain, $is_subdomain, $filter_by_email) {
+    // DEBUG log (len ak WP_DEBUG)
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('[Artefactum API] Domain match debug: exact=' . $domain . ', wildcard=' . $wildcard_domain . ', root=' . $root_domain);
+    }
+    
+    // Kontrola, či stĺpec product_code existuje v tabuľke
+    $has_product_code = false;
+    $columns = $wpdb->get_results("SHOW COLUMNS FROM {$wpdb->licences} LIKE 'product_code'");
+    if (!empty($columns)) {
+        $has_product_code = true;
+    }
+    
+    // Funkcia na vyhľadanie core licencie podľa domény (BEZ product_code)
+    $find_core_licence = function() use ($wpdb, $domain, $wildcard_domain, $root_domain, $is_subdomain, $filter_by_email, $has_product_code) {
+        // Zostavíme query bez product_code filtra
         if ($is_subdomain) {
             $query = "SELECT * FROM {$wpdb->licences} 
-                      WHERE (domain = %s OR domain = %s OR domain = %s) 
-                      AND product_code = %s
-                      AND status = 'active' 
+                      WHERE domain IN (%s, %s, %s) 
+                      AND status IN ('active', 'grace', 'warning') 
                       ORDER BY 
                         CASE 
                           WHEN domain = %s THEN 1
@@ -314,7 +366,6 @@ function artefactum_api_check_licence($request) {
                 $domain,
                 $wildcard_domain,
                 $root_domain,
-                $product_code_to_search,
                 $domain,
                 $wildcard_domain,
                 $root_domain
@@ -329,11 +380,10 @@ function artefactum_api_check_licence($request) {
         } else {
             $query = "SELECT * FROM {$wpdb->licences} 
                       WHERE (domain = %s OR domain = %s) 
-                      AND product_code = %s
-                      AND status = 'active' 
+                      AND status IN ('active', 'grace', 'warning') 
                       ORDER BY CASE WHEN domain = %s THEN 1 ELSE 2 END 
                       LIMIT 1";
-            $params = [$domain, $root_domain, $product_code_to_search, $domain];
+            $params = [$domain, $root_domain, $domain];
             
             if ($filter_by_email) {
                 $query .= " AND contact_email LIKE %s";
@@ -344,13 +394,8 @@ function artefactum_api_check_licence($request) {
         }
     };
     
-    // Skús najprv nájsť licenciu s požadovaným product_code
-    $licence = $find_licence($product_code);
-    
-    // Ak neexistuje a product_code nie je 'theme_core', skús fallback na theme_core
-    if (!$licence && $product_code !== 'theme_core') {
-        $licence = $find_licence('theme_core');
-    }
+    // Nájdi core licenciu podľa domény
+    $licence = $find_core_licence();
     
     // Ak stále neexistuje, vráť chybu
     if (!$licence) {
@@ -370,8 +415,8 @@ function artefactum_api_check_licence($request) {
                 'license_key' => null,
                 'expiry_date' => null,
                 'days_remaining' => null,
-                'product_code' => $product_code,
                 'plan_type' => 'trial',
+                'modules' => [],
                 'messages' => $error_messages
             ]);
         } else {
@@ -384,8 +429,8 @@ function artefactum_api_check_licence($request) {
                 'license_key' => null,
                 'expiry_date' => null,
                 'days_remaining' => null,
-                'product_code' => $product_code,
-                'plan_type' => 'trial'
+                'plan_type' => 'trial',
+                'modules' => []
             ]);
         }
     }
@@ -402,6 +447,47 @@ function artefactum_api_check_licence($request) {
     }
 
     $response = artefactum_calculate_licence_status($licence);
+
+    // Načítanie modulov z license_modules tabuľky (backward-compatible fallback)
+    $modules = [];
+    $modules_table_exists = $wpdb->get_var("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = '{$wpdb->license_modules}'");
+    
+    if ($modules_table_exists && $licence) {
+        $module_rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT module_slug, plan, expires_at, status 
+             FROM {$wpdb->license_modules} 
+             WHERE license_id = %d AND status = 'active'",
+            $licence->id
+        ));
+        
+        if ($module_rows) {
+            foreach ($module_rows as $mod) {
+                $module_valid = true;
+                $module_status = 'active';
+                
+                // Kontrola expirácie modulu
+                if (!empty($mod->expires_at)) {
+                    $today = new DateTime('now', new DateTimeZone('Europe/Bratislava'));
+                    $expires = DateTime::createFromFormat('Y-m-d', $mod->expires_at, new DateTimeZone('Europe/Bratislava'));
+                    if ($expires && $today > $expires) {
+                        $module_valid = false;
+                        $module_status = 'expired';
+                    }
+                }
+                
+                $modules[] = [
+                    'module' => $mod->module_slug,
+                    'module_slug' => $mod->module_slug,
+                    'plan' => $mod->plan ?? null,
+                    'expires_at' => $mod->expires_at ?? null,
+                    'status' => $module_status,
+                    'valid' => $module_valid
+                ];
+            }
+        }
+    }
+    
+    $response['modules'] = $modules;
 
     $messages = [];
 
@@ -460,7 +546,6 @@ function artefactum_calculate_licence_status($licence) {
             'expiry_date' => null,
             'days_remaining' => null,
             'customer_uid' => null,
-            'product_code' => 'theme_core',
             'plan_type' => 'trial',
             'features' => []
         ];
@@ -481,21 +566,29 @@ function artefactum_calculate_licence_status($licence) {
         }
     }
     
+    // Zostavenie základnej odpovede (product_code je voliteľný pre spätnú kompatibilitu)
+    $base_response = [
+        'license_key' => $licence->license_key,
+        'customer_uid' => $licence->customer_uid ?? null,
+        'plan_type' => $licence->plan_type ?? 'trial',
+        'features' => $features
+    ];
+    
+    // Pridaj product_code len ak existuje v licencii
+    if (isset($licence->product_code)) {
+        $base_response['product_code'] = $licence->product_code;
+    }
+    
     if (empty($licence->expiry_date)) {
-        return [
+        return array_merge($base_response, [
             'valid' => true,
             'status' => 'active',
             'message' => 'Neobmedzena licencia',
-            'license_key' => $licence->license_key,
             'expiry_date' => null,
             'days_remaining' => null,
             'grace_period' => false,
-            'pre_warning' => false,
-            'customer_uid' => $licence->customer_uid ?? null,
-            'product_code' => $licence->product_code ?? 'theme_core',
-            'plan_type' => $licence->plan_type ?? 'trial',
-            'features' => $features
-        ];
+            'pre_warning' => false
+        ]);
     }
     
     $today = new DateTime('now', new DateTimeZone('Europe/Bratislava'));
@@ -504,71 +597,51 @@ function artefactum_calculate_licence_status($licence) {
     $days_diff = $diff->days * ($today > $expiry ? -1 : 1);
     
     if ($days_diff < -$GRACE_DAYS) {
-        return [
+        return array_merge($base_response, [
             'valid' => false,
             'status' => 'expired',
             'message' => 'Licencia expirovala',
-            'license_key' => $licence->license_key,
             'expiry_date' => $licence->expiry_date,
             'days_remaining' => 0,
             'grace_period' => false,
-            'pre_warning' => false,
-            'customer_uid' => $licence->customer_uid ?? null,
-            'product_code' => $licence->product_code ?? 'theme_core',
-            'plan_type' => $licence->plan_type ?? 'trial',
-            'features' => $features
-        ];
+            'pre_warning' => false
+        ]);
     }
     
     if ($days_diff < 0) {
         $grace_days_left = $GRACE_DAYS + $days_diff;
-        return [
+        return array_merge($base_response, [
             'valid' => true,
             'status' => 'grace',
             'message' => "Grace period: zostáva {$grace_days_left} dní",
-            'license_key' => $licence->license_key,
             'expiry_date' => $licence->expiry_date,
             'days_remaining' => $grace_days_left,
             'grace_period' => true,
-            'pre_warning' => false,
-            'customer_uid' => $licence->customer_uid ?? null,
-            'product_code' => $licence->product_code ?? 'theme_core',
-            'plan_type' => $licence->plan_type ?? 'trial',
-            'features' => $features
-        ];
+            'pre_warning' => false
+        ]);
     }
     
     if ($days_diff <= $PRE_WARNING_DAYS) {
-        return [
+        return array_merge($base_response, [
             'valid' => true,
             'status' => 'warning',
             'message' => "Licencia vyprší o {$days_diff} dní",
-            'license_key' => $licence->license_key,
             'expiry_date' => $licence->expiry_date,
             'days_remaining' => $days_diff,
             'grace_period' => false,
-            'pre_warning' => true,
-            'customer_uid' => $licence->customer_uid ?? null,
-            'product_code' => $licence->product_code ?? 'theme_core',
-            'plan_type' => $licence->plan_type ?? 'trial',
-            'features' => $features
-        ];
+            'pre_warning' => true
+        ]);
     }
     
-    return [
+    return array_merge($base_response, [
         'valid' => true,
         'status' => 'active',
         'message' => 'Licencia je platná',
-        'license_key' => $licence->license_key,
         'expiry_date' => $licence->expiry_date,
         'days_remaining' => $days_diff,
         'grace_period' => false,
-        'pre_warning' => false,
-        'customer_uid' => $licence->customer_uid ?? null,
-        'product_code' => $licence->product_code ?? 'theme_core',
-        'plan_type' => $licence->plan_type ?? 'trial',
-        'features' => $features
-    ];
+        'pre_warning' => false
+    ]);
 }
 
 /**
@@ -836,7 +909,7 @@ function artefactum_admin_page() {
             // Spracovanie modulov - vymazať existujúce a vložiť nové
             if ($license_id > 0) {
                 // Vymazať všetky existujúce moduly pre túto licenciu
-                $wpdb->delete($wpdb->license_modules, ['license_id' => $license_id]);
+                $wpdb->delete($wpdb->license_modules, ['license_id' => $license_id], ['%d']);
                 
                 // Spracovať poslané moduly
                 $modules_data = [];
@@ -844,7 +917,9 @@ function artefactum_admin_page() {
                     foreach ($_POST['modules'] as $module) {
                         $module_slug = sanitize_key($module['module_slug'] ?? '');
                         $plan = !empty($module['plan']) ? strtoupper(sanitize_text_field($module['plan'])) : null;
-                        $expires_at = !empty($module['expires_at']) ? sanitize_text_field($module['expires_at']) : null;
+                        $expires_at = !empty($module['expires_at'])
+                                    ? date('Y-m-d', strtotime($module['expires_at']))
+                                    : null;
                         
                         // Validácia plan - povolené: TRIAL, PREMIUM, INACTIVE (case-insensitive)
                         if ($plan) {
@@ -879,6 +954,8 @@ function artefactum_admin_page() {
                 
                 // Debug logging
                 if (defined('WP_DEBUG') && WP_DEBUG && defined('WP_DEBUG_LOG') && WP_DEBUG_LOG) {
+                    error_log('[Artefactum] Modules saved for license ID: ' . $license_id);
+                    error_log(print_r($_POST['modules'], true));
                     error_log(sprintf(
                         '[Artefactum Licence] License saved: license_id=%d, modules_count=%d, module_slugs=%s',
                         $license_id,
@@ -1208,10 +1285,30 @@ function artefactum_admin_page() {
                         $default_extend_date = $lic->expiry_date 
                             ? date('Y-m-d', strtotime($lic->expiry_date . ' +1 year'))
                             : date('Y-m-d', strtotime('+1 year'));
+                        
+                        // Načítať moduly pre túto licenciu
+                        $modules = $wpdb->get_results($wpdb->prepare(
+                            "SELECT module_slug, plan FROM {$wpdb->license_modules} WHERE license_id = %d AND status = 'active'",
+                            $lic->id
+                        ));
                         ?>
                         <tr>
                             <td><?php echo $domain_display; ?></td>
-                            <td><code style="font-size:11px;"><?php echo esc_html($lic->product_code ?? 'theme_core'); ?></code></td>
+                            <td>
+                                <code style="font-size:11px;"><?php echo esc_html($lic->product_code ?? 'theme_core'); ?></code>
+                                <?php if (!empty($modules)): ?>
+                                    <div style="margin-top:5px;">
+                                        <?php foreach ($modules as $m): ?>
+                                            <div style="font-size:11px;color:#666;margin-top:3px;">
+                                                <span style="color:#2271b1;">🔌</span> <?php echo esc_html($m->module_slug); ?> 
+                                                <?php if ($m->plan): ?>
+                                                    <span style="color:#999;">(<?php echo esc_html($m->plan); ?>)</span>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php endif; ?>
+                            </td>
                             <td><code style="font-size:10px;"><?php echo esc_html($lic->license_key); ?></code></td>
                             <td><?php echo esc_html($lic->client_name ?: '-'); ?></td>
                             <td title="<?php echo esc_attr($lic->contact_email); ?>">
