@@ -2319,11 +2319,11 @@ function artefactum_extended_statistics_shortcode($atts) {
 				$current_year . '-12-31'
 			));
 			
-			// Formatovanie výstupu ako v tvojom fungujúcom príklade
-			echo '<div style="padding:15px 20px;background:#fff;border-left:4px solid #10b981;margin:20px 0;border-radius:5px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">';
+			// Formatovanie výstupu ako v tvojom fungujúcom príklade    
+			/* echo '<div style="padding:15px 20px;background:#fff;border-left:4px solid #10b981;margin:20px 0;border-radius:5px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">';
 			echo '<span style="font-size:16px;color:#666;"> <strong style="color:#10b981;">' . $current_year . '</strong> - uhradené faktúry celkom: </span>';
 			echo '<strong style="font-size:18px;color:#10b981;margin-left:10px;display:inline-block">' . number_format($total_invoiced, 2, ',', ' ') . ' €</strong>';
-			echo '</div>';
+			echo '</div>'; */
             
 		} else {
 			echo '<div style="background:#fee2e2;padding:15px;border-radius:5px;color:#991b1b;">⚠️ Chyba pripojenia k databáze</div>';
@@ -2614,7 +2614,7 @@ function artefactum_extended_statistics_shortcode($atts) {
                 $visible_month_indexes = [];
                 // Iba mesiace budúcnosti (čísla mesiacov väčšie než aktuálny mesiac, napr. ak je 2, tak 3-12)
                 for ($m = 1; $m <= 12; $m++) {
-                    if ($m > $current_month) {
+                    if ($m >= $current_month) {
                         $visible_month_indexes[] = $m;
                     }
                 }
