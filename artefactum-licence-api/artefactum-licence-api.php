@@ -2196,21 +2196,23 @@ function artefactum_extended_statistics_shortcode($atts) {
 		$current_year = date('Y');
 		$db_dat = arte_get_extended_data_db();
         
-        // === VŠETKY ROČNÉ SLUŽBY PRE MESAČNÝ ROZPAD ===
-        $all_yearly_services = $db_dat->get_results("
+        // === VŠETKY ROČNÉ SLUŽBY PRE MESAČNÝ ROZPAD (12 mesiacov od aktuálneho mesiaca) ===
+        $start_date = date('Y-m-01');
+        $end_date   = date('Y-m-d', strtotime('+11 months', strtotime($start_date)));
+
+        $all_yearly_services = $db_dat->get_results($db_dat->prepare("
         SELECT 
             nazovsluyby,
             cenasluzbyrok,
             datumexpiracie,
             MONTH(datumexpiracie) as expiry_month
         FROM predplatenerocnesluzby
-        WHERE YEAR(datumexpiracie) = YEAR(NOW())
+        WHERE datumexpiracie BETWEEN %s AND %s
         AND nazovsluyby NOT LIKE '%NEPREDLŽOVAŤ%' 
         AND nazovsluyby NOT LIKE '%artefactum%' 
         AND nazovsluyby NOT LIKE '%expressar%' 
         AND nazovsluyby NOT LIKE '%artepaint%' 
-        AND nazovsluyby NOT LIKE '%STOP%'
-        ");
+        AND nazovsluyby NOT LIKE '%STOP%'", $start_date, $end_date));
 
 
         // === VÝPOČET MESAČNÉHO ROZPADU ===
@@ -2259,6 +2261,69 @@ function artefactum_extended_statistics_shortcode($atts) {
                 if (strpos($name, 'special') !== false) {
                     $monthly_breakdown[$month]['special']['count']++;
                     $monthly_breakdown[$month]['special']['sum'] += $price;
+                }
+            }
+        }
+
+        // Korekcia – aktuálny mesiac musí mať dopočítané hodnoty aj pri špecifických dátach v DB
+        $current_month_num = (int)date('n');
+        $current_year_num  = (int)date('Y');
+
+        $current_month_services = $db_dat->get_results($db_dat->prepare("
+            SELECT 
+                nazovsluyby,
+                cenasluzbyrok
+            FROM predplatenerocnesluzby
+            WHERE MONTH(datumexpiracie) = %d
+              AND YEAR(datumexpiracie) = %d
+              AND datumexpiracie BETWEEN %s AND %s
+              AND nazovsluyby NOT LIKE '%NEPREDLŽOVAŤ%' 
+              AND nazovsluyby NOT LIKE '%artefactum%' 
+              AND nazovsluyby NOT LIKE '%expressar%' 
+              AND nazovsluyby NOT LIKE '%artepaint%' 
+              AND nazovsluyby NOT LIKE '%STOP%'", $current_month_num, $current_year_num, $start_date, $end_date));
+
+        if (!empty($current_month_services)) {
+            // Najskôr vynuluj aktuálny mesiac a potom ho vypočítaj nanovo
+            $monthly_breakdown[$current_month_num] = [
+                'sk'      => ['count' => 0, 'sum' => 0],
+                'eu'      => ['count' => 0, 'sum' => 0],
+                'com'     => ['count' => 0, 'sum' => 0],
+                'ssl'     => ['count' => 0, 'sum' => 0],
+                'hosting' => ['count' => 0, 'sum' => 0],
+                'special' => ['count' => 0, 'sum' => 0],
+            ];
+
+            foreach ($current_month_services as $service) {
+                $price = (float)$service->cenasluzbyrok;
+                $name  = strtolower($service->nazovsluyby);
+
+                if (strpos($name, 'evidencia') !== false) {
+                    if (preg_match('/\.sk\b/i', $name)) {
+                        $monthly_breakdown[$current_month_num]['sk']['count']++;
+                        $monthly_breakdown[$current_month_num]['sk']['sum'] += ($price - 16.50);
+                    } elseif (preg_match('/\.eu\b/i', $name)) {
+                        $monthly_breakdown[$current_month_num]['eu']['count']++;
+                        $monthly_breakdown[$current_month_num]['eu']['sum'] += ($price - 12);
+                    } elseif (preg_match('/\.com\b/i', $name)) {
+                        $monthly_breakdown[$current_month_num]['com']['count']++;
+                        $monthly_breakdown[$current_month_num]['com']['sum'] += ($price - 18);
+                    }
+                }
+
+                if (strpos($name, 'basic ssl') !== false) {
+                    $monthly_breakdown[$current_month_num]['ssl']['count']++;
+                    $monthly_breakdown[$current_month_num]['ssl']['sum'] += $price;
+                }
+
+                if (strpos($name, 'hosting') !== false) {
+                    $monthly_breakdown[$current_month_num]['hosting']['count']++;
+                    $monthly_breakdown[$current_month_num]['hosting']['sum'] += $price;
+                }
+
+                if (strpos($name, 'special') !== false) {
+                    $monthly_breakdown[$current_month_num]['special']['count']++;
+                    $monthly_breakdown[$current_month_num]['special']['sum'] += $price;
                 }
             }
         }
@@ -2608,15 +2673,18 @@ function artefactum_extended_statistics_shortcode($atts) {
         
         <div style="overflow-x:auto;">
             <?php
-                // Zistiť aktuálny mesiac
+                // Zistiť aktuálny mesiac a rok
                 $current_month = (int)date('n'); // 1=Jan, ..., 12=Dec
+                $current_year  = (int)date('Y');
                 $months_all = ['Jan', 'Feb', 'Mar', 'Apr', 'Máj', 'Jún', 'Júl', 'Aug', 'Sep', 'Okt', 'Nov', 'Dec'];
                 $visible_month_indexes = [];
-                // Iba mesiace budúcnosti (čísla mesiacov väčšie než aktuálny mesiac, napr. ak je 2, tak 3-12)
-                for ($m = 1; $m <= 12; $m++) {
-                    if ($m >= $current_month) {
-                        $visible_month_indexes[] = $m;
-                    }
+                $visible_month_years   = [];
+                // Vždy zobraz 12 mesiacov od aktuálneho (vrátane), aj keď prechádza do ďalšieho roka
+                for ($i = 0; $i < 12; $i++) {
+                    $month_index = (($current_month - 1 + $i) % 12) + 1; // 1..12 v cykle
+                    $year_offset = intdiv($current_month - 1 + $i, 12);
+                    $visible_month_indexes[] = $month_index;
+                    $visible_month_years[]   = $current_year + $year_offset;
                 }
             ?>
             <table style="width:100%;font-size:12px;border-collapse:collapse;min-width:900px;margin-bottom:10px !important; ">
@@ -2624,9 +2692,12 @@ function artefactum_extended_statistics_shortcode($atts) {
                     <tr style="background:#c4b5ae;">
                         <th style="background:#c4b5ae;padding:8px;text-align:left;border:1px solid #ddd;font-size: 14px;font-weight: bold;">Typ</th>
                         <?php
-                        foreach ($visible_month_indexes as $m) {
+                        foreach ($visible_month_indexes as $idx => $m) {
                             $mname = $months_all[$m-1];
-                            echo "<th style='background:#c4b5ae;padding:8px;text-align:center;border:1px solid #ddd;font-size: 14px;font-weight: bold;'>$mname</th>";
+                            $year_for_col = $visible_month_years[$idx];
+                            $is_next_year = ($year_for_col > $current_year);
+                            $bg_color = $is_next_year ? '#9cb8e5' : '#c4b5ae'; // svetlejšia pre ďalší rok
+                            echo "<th style='background:{$bg_color};padding:8px;text-align:center;border:1px solid #ddd;font-size: 14px;font-weight: bold;' title='{$mname} {$year_for_col}'>$mname</th>";
                         }
                         ?>
                     </tr>
