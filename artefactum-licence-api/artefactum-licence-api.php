@@ -2624,14 +2624,20 @@ function artefactum_extended_statistics_shortcode($atts) {
                     <th style="background-color: #c4b5ae;padding:8px;text-align:left; font-size: 14px;font-weight: bold;">Faktúrované</th>
                     <th style="background-color: #c4b5ae;padding:8px;text-align:right; font-size: 14px;font-weight: bold;">Dátum splatnosti</th>
                     <th style="background-color: #c4b5ae;padding:8px;text-align:right; font-size: 14px;font-weight: bold;">Suma</th>
-                    <th style="background-color: #c4b5ae;padding:8px;text-align:right; font-size: 14px;font-weight: bold;">Po splatnosti</th>
+                    <th style="background-color: #c4b5ae;padding:8px;text-align:right; font-size: 14px;font-weight: bold;">Splatnosť</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($unpaid_advanced as $advinvoice): ?>
                     <?php
                     $overdue_advcolor = $advinvoice->days_overdue > 30 ? '#dc2626' : 
-                                       ($advinvoice->days_overdue > 14 ? '#f60' : '#6b7280');
+                                       ($advinvoice->days_overdue > 14 ? '#ff073a' : '#6b7280');
+                    // Format days_overdue text
+                    if ($advinvoice->days_overdue > 0) {
+                        $overdue_adv_text = '- ' . $advinvoice->days_overdue . ' dní';
+                    } else {
+                        $overdue_adv_text = '(+ ' . abs($advinvoice->days_overdue) . ') dní';
+                    }
                     ?>
                     <tr class="collapsed">
                         <td data-label="Klient" style="padding:8px;">
@@ -2651,9 +2657,9 @@ function artefactum_extended_statistics_shortcode($atts) {
                         <td data-label="Suma" style="padding:8px;text-align:right;">
                             <strong><?php echo number_format($advinvoice->celkomsdph, 2, ',', ' ') . ' €'; ?></strong>
                         </td>
-                        <td data-label="Po splatnosti" style="padding:8px;text-align:right;">
+                        <td data-label="Splatnosť" style="padding:8px;text-align:right;">
                             <span style="color:<?php echo $overdue_advcolor; ?>;font-weight:bold;">
-                                <?php echo $advinvoice->days_overdue; ?> dní
+                                <?php echo $overdue_adv_text; ?>
                             </span>
                         </td>
                     </tr>
