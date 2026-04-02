@@ -1795,9 +1795,7 @@ if (!empty($all_yearly_services)) {
                 <?php endif; ?>
             </ul>
             <p style="margin:10px 0 0 0;">
-                <a href="<?php echo admin_url('admin.php?page=artefactum-licences'); ?>" class="button button-primary button-small" style="background:#f60; border-color:#f60; color:#fff; padding:5px 15px; text-decoration:none;">
-                    Zobraziť všetky licencie →
-                </a>
+                <a href="<?php echo admin_url('admin.php?page=artefactum-licences'); ?>" class="button button-primary button-small" style="background:#f60; border-color:#f60; color:#fff; padding:5px 15px; text-decoration:none;" target="_blank">Zobraziť všetky licencie →</a>
             </p>
         </div>
         <?php endif; ?>
